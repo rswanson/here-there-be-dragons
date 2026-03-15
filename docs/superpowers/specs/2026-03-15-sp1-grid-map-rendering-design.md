@@ -97,9 +97,11 @@ PixiJS owns rendering. Zustand owns state. The canvas never holds authoritative 
 
 - Tokens snap to grid cell centers by default
 - Snap modes: off, center-snap, corner-snap (configurable per-map)
+  - **Center-snap:** token center aligns to the center of the grid cell. For multi-square tokens (2x2+), the token's origin (top-left cell) snaps to center, so the token occupies a clean NxN block.
+  - **Corner-snap:** token origin aligns to a grid intersection point. Useful for precise positioning relative to walls/doors.
 - Drawing tool endpoints optionally snap to grid intersections
 - Measurement tools always reference grid coordinates for distance calculation
-- In gridless mode, all snapping is disabled
+- In gridless mode, all snapping is disabled. The snap_mode setting is preserved so it restores when the DM re-enables the grid.
 
 ---
 
@@ -131,7 +133,7 @@ New maps start with three layers:
 - Toggle visibility (hides from DM view temporarily; player view unaffected unless `dm_only`)
 - Lock (prevents editing — protects map images from accidental moves)
 - Adjust opacity (applies to entire PixiJS Container alpha)
-- Set `dm_only` flag — layer excluded entirely from player render (not sent to player clients)
+- Set `dm_only` flag — layer excluded entirely from player render. **Server-side enforcement:** the server filters dm_only layers from REST responses and WebSocket broadcasts to non-DM clients. Player clients never receive dm_only layer data — this is a security boundary, not a client-side UI concern.
 
 ### Rendering
 
@@ -161,7 +163,7 @@ Each token belongs to a layer and has:
 
 ### Status Markers
 
-- Predefined set of condition icons covering D&D 3.5e conditions (poisoned, stunned, prone, grappled, concentrating, blinded, frightened, invisible, etc.)
+- Predefined set of ~20 condition icons covering the D&D 3.5e condition list (blinded, charmed, confused, dazed, dazzled, deafened, entangled, exhausted, fascinated, fatigued, frightened, grappled, helpless, invisible, nauseated, paralyzed, prone, shaken, sickened, stunned)
 - Ships with a default icon set — custom markers deferred
 - DM toggles markers on/off per token
 - Rendered as small icons arranged around the token border (top-right corner, wrapping clockwise)
@@ -217,6 +219,8 @@ Separate from basic drawing tools — these are tactical combat overlays:
 - **Sphere/Circle** — center + radius in grid squares
 - **Line** — origin + length in grid squares + width (default 1 square)
 
+**Affected square calculation:** Follows D&D 3.5e rules (PHB p.304) — a square is affected if any part of the template shape overlaps the square. For cones, the origin point is a grid intersection and the cone expands outward. For spheres/circles, the center can be a grid intersection or cell center. This produces the standard D&D template shapes familiar to 3.5e players.
+
 **Behavior:**
 - Semi-transparent colored overlays with distinct visual style (hatched or colored fill) — clearly different from drawings
 - Snap to grid, display affected squares highlighted
@@ -231,7 +235,7 @@ Raw mouse points simplified via Ramer-Douglas-Peucker algorithm after stroke end
 
 - Drawing actions support undo/redo (Ctrl+Z / Ctrl+Shift+Z)
 - Scoped to drawing operations only, not token movement
-- Undo stack per drawing layer, cleared on layer switch
+- Per-layer undo stacks that persist across layer switches (switching to Layer B and back to Layer A preserves Layer A's history)
 
 ---
 
@@ -336,7 +340,8 @@ CREATE TABLE tokens (
     rotation        REAL NOT NULL DEFAULT 0,
     bars_json       JSONB NOT NULL DEFAULT '[]',
     status_markers  TEXT[] NOT NULL DEFAULT '{}',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Drawing objects on drawing layers
@@ -351,7 +356,8 @@ CREATE TABLE drawings (
     stroke_width    REAL NOT NULL DEFAULT 2,
     stroke_opacity  REAL NOT NULL DEFAULT 1.0,
     fill_color      TEXT,
-    fill_opacity    REAL NOT NULL DEFAULT 0.3
+    fill_opacity    REAL NOT NULL DEFAULT 0.3,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
@@ -383,20 +389,30 @@ CREATE TABLE drawings (
 New variants added to the existing `ClientMessage` / `ServerMessage` enums from SP-0:
 
 **Client → Server:**
+- `CreateToken { layer_id, token }` — create new token
 - `MoveToken { token_id, x, y }` — token position update
 - `UpdateToken { token_id, patch }` — token property changes (bars, status, name, size)
+- `DeleteToken { token_id }` — remove token
 - `CreateDrawing { layer_id, drawing }` — new drawing object
+- `UpdateDrawing { drawing_id, patch }` — update drawing properties
 - `DeleteDrawing { drawing_id }` — remove drawing
 - `ReorderLayers { map_id, layer_ids }` — new layer order
 - `PlaceMapImage { layer_id, asset_id, position }` — place image on layer
+- `UpdateMapImage { image_id, patch }` — update image position/size
+- `DeleteMapImage { image_id }` — remove image from layer
 
 **Server → Client:**
+- `TokenCreated { layer_id, token, created_by }` — broadcast new token
 - `TokenMoved { token_id, x, y, moved_by }` — broadcast token move
 - `TokenUpdated { token_id, patch, updated_by }` — broadcast token changes
+- `TokenDeleted { token_id, deleted_by }` — broadcast token removal
 - `DrawingCreated { layer_id, drawing }` — broadcast new drawing
+- `DrawingUpdated { drawing_id, patch }` — broadcast drawing changes
 - `DrawingDeleted { drawing_id }` — broadcast drawing removal
 - `LayerUpdated { layer }` — broadcast layer changes (reorder, visibility, etc.)
 - `MapImagePlaced { layer_id, image }` — broadcast image placement
+- `MapImageUpdated { image_id, patch }` — broadcast image changes
+- `MapImageDeleted { image_id }` — broadcast image removal
 
 ### Design Decisions
 
