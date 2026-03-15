@@ -3,7 +3,8 @@
        test test-server test-client test-e2e test-watch \
        lint lint-server lint-client fmt fmt-check \
        db-migrate db-prepare \
-       docker docker-dev clean
+       docker docker-dev clean \
+       worktree-prune worktree-clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -89,6 +90,25 @@ docker: ## Build and run full stack via docker compose
 
 docker-dev: ## Start dev dependencies (DB) via docker compose
 	docker compose -f docker/docker-compose.dev.yml up
+
+# --- Worktrees ---
+
+worktree-prune: ## Remove stale worktree metadata (directory already deleted)
+	git worktree prune -v
+
+worktree-clean: ## Remove worktrees whose branch was merged or deleted on remote
+	@git worktree prune
+	@git fetch --prune
+	@git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //' | while read wt; do \
+		[ "$$wt" = "$(shell pwd)" ] && continue; \
+		branch=$$(git -C "$$wt" rev-parse --abbrev-ref HEAD 2>/dev/null); \
+		[ -z "$$branch" ] && continue; \
+		gone=$$(git branch -vv | grep "^\s*$$branch\b" | grep ': gone]'); \
+		if [ -n "$$gone" ]; then \
+			echo "Removing worktree $$wt (branch '$$branch' is gone from remote)"; \
+			git worktree remove "$$wt"; \
+		fi; \
+	done
 
 # --- Cleanup ---
 
