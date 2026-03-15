@@ -5,7 +5,7 @@ export default defineConfig({
   timeout: 30_000,
   retries: 0,
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.BASE_URL ?? 'http://localhost:5173',
     // Headless Chromium with WebGL support
     launchOptions: {
       args: ['--use-gl=angle', '--use-angle=swiftshader'],
@@ -17,8 +17,6 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
-  // E2E tests expect both the backend (port 3000) and Vite dev server (port 5173) to be running.
-  // Start them before running: docker compose -f docker/docker-compose.dev.yml up -d
-  //   cargo run -p server  (with DATABASE_URL and JWT_SECRET set)
-  //   cd client && npm run dev
+  // Local dev: start backend + Vite dev server, then run tests (baseURL defaults to :5173)
+  // CI: server serves built client on :3000, set BASE_URL=http://localhost:3000
 })
