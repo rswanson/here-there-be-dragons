@@ -63,7 +63,7 @@ pub fn generate_refresh_token() -> String {
 pub fn random_hex_token(len: usize) -> String {
     use rand::RngCore;
     let mut bytes = vec![0u8; len];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     hex::encode(bytes)
 }
 
