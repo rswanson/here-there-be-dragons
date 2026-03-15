@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-use uuid::Uuid;
 
 /// Messages sent from client to server
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

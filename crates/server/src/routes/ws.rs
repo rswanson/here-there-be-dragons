@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 
 use crate::state::AppState;
 use htbd_core::messages::{ClientMessage, ServerMessage};
