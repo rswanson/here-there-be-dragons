@@ -1,17 +1,8 @@
-mod config;
-mod error;
-mod middleware;
-mod routes;
-mod state;
-
-use axum::Router;
 use std::sync::Arc;
-use tower_http::cors::CorsLayer;
-use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
-use config::Config;
-use state::AppState;
+use server::config::Config;
+use server::state::AppState;
 
 #[tokio::main]
 async fn main() {
@@ -40,16 +31,11 @@ async fn main() {
 
     let client_dir =
         std::env::var("CLIENT_DIR").unwrap_or_else(|_| "/srv/client".to_string());
-    let app = Router::new()
-        .nest("/api", routes::api_routes())
-        .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive()) // Tighten in production
-        .with_state(state)
-        .fallback_service(
-            tower_http::services::ServeDir::new(&client_dir).fallback(
-                tower_http::services::ServeFile::new(format!("{}/index.html", client_dir)),
-            ),
-        );
+    let app = server::build_app(state).fallback_service(
+        tower_http::services::ServeDir::new(&client_dir).fallback(
+            tower_http::services::ServeFile::new(format!("{}/index.html", client_dir)),
+        ),
+    );
 
     let listener = tokio::net::TcpListener::bind(&config.bind_address)
         .await

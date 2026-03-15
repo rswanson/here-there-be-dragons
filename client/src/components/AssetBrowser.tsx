@@ -2,9 +2,11 @@ import { useRef, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
+import { useUiStore } from '../state/ui'
 
 export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient()
+  const setMapAssetUrl = useUiStore((s) => s.setMapAssetUrl)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [filter, setFilter] = useState<string | undefined>(undefined)
   const [dragOver, setDragOver] = useState(false)
@@ -150,13 +152,24 @@ export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: s
                 <p style={{ fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {asset.filename}
                 </p>
-                <button
-                  onClick={() => handleDelete(asset)}
-                  style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-error)', background: 'none', border: 'none', marginTop: 'var(--space-xs)' }}
-                  aria-label={`Delete ${asset.filename}`}
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', gap: 'var(--space-xs)', justifyContent: 'center', marginTop: 'var(--space-xs)' }}>
+                  {asset.content_type.startsWith('image/') && (
+                    <button
+                      onClick={() => { setMapAssetUrl(api.assets.url(asset.id)); onOpenChange(false) }}
+                      style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-interactive)', background: 'none', border: 'none' }}
+                      aria-label={`Set ${asset.filename} as map`}
+                    >
+                      Set as Map
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(asset)}
+                    style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-error)', background: 'none', border: 'none' }}
+                    aria-label={`Delete ${asset.filename}`}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

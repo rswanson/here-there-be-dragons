@@ -166,7 +166,7 @@ async fn issue_tokens(
         .max_age(time::Duration::minutes(15));
 
     let refresh_cookie = Cookie::build(("refresh_token", refresh_token))
-        .path("/api/auth/refresh")
+        .path("/api/auth")
         .http_only(true)
         .same_site(SameSite::Lax)
         .max_age(time::Duration::days(7));
