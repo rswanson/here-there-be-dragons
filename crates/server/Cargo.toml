@@ -22,7 +22,7 @@ sqlx.workspace = true
 thiserror.workspace = true
 
 rust-argon2 = "3"
-jsonwebtoken = "9"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 rand = "0.9"
 sha2 = "0.10"
 hex = "0.4"
