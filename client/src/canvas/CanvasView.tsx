@@ -1,0 +1,177 @@
+import { useEffect, useRef, useState } from 'react'
+import type { Application, Sprite } from 'pixi.js'
+import { useUiStore } from '../state/ui'
+
+type CanvasStatus = 'loading' | 'ready' | 'error'
+
+type PixiApp = Application & { _resizeObserver?: ResizeObserver }
+
+export function CanvasView() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [status, setStatus] = useState<CanvasStatus>('loading')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const appRef = useRef<PixiApp | null>(null)
+  const spriteRef = useRef<Sprite | null>(null)
+  const pixiRef = useRef<typeof import('pixi.js') | null>(null)
+  const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const container = containerRef.current
+    if (!canvas || !container) return
+
+    let mounted = true
+
+    const initPixi = async () => {
+      try {
+        const PIXI = await import('pixi.js')
+        pixiRef.current = PIXI
+        if (!mounted) return
+
+        const app = new PIXI.Application()
+
+        await app.init({
+          canvas,
+          width: container.clientWidth || 800,
+          height: container.clientHeight || 600,
+          background: '#1a1a2e',
+          antialias: true,
+          autoDensity: true,
+          resolution: window.devicePixelRatio || 1,
+          preference: 'webgl',
+        })
+
+        if (!mounted) {
+          app.destroy()
+          return
+        }
+
+        appRef.current = app
+        setStatus('ready')
+
+        const observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect
+            if (width > 0 && height > 0) {
+              app.renderer.resize(width, height)
+            }
+          }
+        })
+        observer.observe(container)
+        ;(app as PixiApp)._resizeObserver = observer
+      } catch (err) {
+        console.error('PixiJS init failed:', err)
+        if (mounted) {
+          setStatus('error')
+          setErrorMsg(err instanceof Error ? err.message : String(err))
+        }
+      }
+    }
+
+    // Defer init to next frame so container has layout dimensions
+    requestAnimationFrame(() => {
+      if (mounted) initPixi()
+    })
+
+    return () => {
+      mounted = false
+      const app = appRef.current
+      if (app) {
+        app._resizeObserver?.disconnect()
+        app.destroy()
+      }
+      appRef.current = null
+      spriteRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!mapAssetUrl || !appRef.current || status !== 'ready') return
+
+    const PIXI = pixiRef.current
+    if (!PIXI) return
+
+    let cancelled = false
+
+    const loadMap = async () => {
+      const app = appRef.current
+      if (!app || cancelled) return
+
+      if (spriteRef.current) {
+        app.stage.removeChild(spriteRef.current)
+        spriteRef.current.destroy()
+        spriteRef.current = null
+      }
+
+      try {
+        // Load image via native Image element because the asset API URL
+        // has no file extension, and PIXI.Assets.load() relies on
+        // extensions to pick the right parser. The browser's Image
+        // element uses the Content-Type header from the server instead.
+        const img = new window.Image()
+        img.crossOrigin = 'anonymous'
+        img.src = mapAssetUrl
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () => reject(new Error(`Failed to load image: ${mapAssetUrl}`))
+        })
+        if (cancelled || !appRef.current) return
+        const texture = PIXI.Texture.from(img)
+        const sprite = new PIXI.Sprite(texture)
+        const scaleX = app.screen.width / sprite.width
+        const scaleY = app.screen.height / sprite.height
+        const scale = Math.min(scaleX, scaleY)
+        sprite.scale.set(scale)
+        sprite.x = (app.screen.width - sprite.width) / 2
+        sprite.y = (app.screen.height - sprite.height) / 2
+        app.stage.addChild(sprite)
+        spriteRef.current = sprite
+      } catch (err) {
+        console.error('Failed to load map asset:', err)
+      }
+    }
+
+    loadMap()
+
+    return () => { cancelled = true }
+  }, [mapAssetUrl, status])
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+      <canvas
+        ref={canvasRef}
+        style={{ display: 'block', width: '100%', height: '100%' }}
+      />
+      {status === 'loading' && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--color-text-secondary)',
+        }}>
+          Initializing canvas...
+        </div>
+      )}
+      {status === 'error' && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexDirection: 'column', gap: 8,
+          color: 'var(--color-error, #ff6b6b)',
+        }}>
+          <p>Canvas failed to initialize</p>
+          {errorMsg && <p style={{ fontSize: 'var(--font-size-sm)', opacity: 0.7 }}>{errorMsg}</p>}
+        </div>
+      )}
+      <div
+        role="application"
+        aria-label="Battle map canvas"
+        aria-roledescription="virtual tabletop"
+        className="sr-only"
+        tabIndex={0}
+      >
+        <p>{mapAssetUrl ? 'Map loaded on canvas.' : 'Empty canvas. Grid and tokens will appear here when a map is loaded.'}</p>
+      </div>
+    </div>
+  )
+}

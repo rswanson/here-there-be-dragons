@@ -84,9 +84,31 @@ docker build -f docker/Dockerfile -t htbd:latest .
 - **Auth:** JWT access tokens (15min, httpOnly cookie) + refresh tokens (7 days, DB-stored, rotated).
 - **Crate dependency direction:** `server` → `db` → `core`, `server` → `asset-store` → (standalone). `core` has no I/O dependencies.
 
+## Pre-Push Verification (REQUIRED)
+
+**You MUST run all of these checks before every commit/push.** They mirror the CI pipeline exactly. Do not push code that hasn't passed all of them. Run backend and frontend checks in parallel where possible.
+
+### Backend (from worktree root)
+
+```bash
+cargo fmt --all -- --check                        # 1. Formatting
+SQLX_OFFLINE=true cargo clippy --workspace -- -D warnings  # 2. Lint
+SQLX_OFFLINE=true cargo test --workspace          # 3. Tests (requires DB for integration tests)
+```
+
+### Frontend (from client/ directory)
+
+```bash
+npm run lint                                      # 4. ESLint
+npm run build                                     # 5. TypeScript check + Vite build
+npm run test -- --run                             # 6. Vitest unit tests
+```
+
+If any check fails, fix the issue before committing. Do not skip checks or push with known failures.
+
 ## CI Pipeline
 
-GitHub Actions runs: `cargo fmt --check`, `cargo clippy`, `cargo test`, `cargo sqlx prepare --check`, client `npm lint` + `npm build`, Docker image build on main.
+GitHub Actions runs: `cargo fmt --check`, `cargo clippy`, `cargo test`, `cargo sqlx prepare --check`, client `npm lint` + `npm build` + `npm test`, Docker image build on main.
 
 ## Design Docs
 

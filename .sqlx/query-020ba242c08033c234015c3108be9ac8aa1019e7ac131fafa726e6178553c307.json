@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM campaign_members WHERE campaign_id = $1 AND user_id = $2 AND role != 'dm'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "020ba242c08033c234015c3108be9ac8aa1019e7ac131fafa726e6178553c307"
+}

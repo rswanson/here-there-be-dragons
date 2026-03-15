@@ -1,2 +1,11 @@
 .superpowers/
 .worktrees/
+target/
+node_modules/
+.env
+client/dist/
+client/test-results/
+data/
+*.swp
+*.swo
+.DS_Store

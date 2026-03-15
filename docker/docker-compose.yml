@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://dragons:dragons@db:5432/dragons
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - ASSET_STORAGE_PATH=/data/assets
+      - BIND_ADDRESS=0.0.0.0:3000
+      - RUST_LOG=info
+    volumes:
+      - assets:/data/assets
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: dragons
+      POSTGRES_PASSWORD: dragons
+      POSTGRES_DB: dragons
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dragons"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  assets:
+  pgdata:
