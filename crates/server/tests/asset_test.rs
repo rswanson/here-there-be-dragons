@@ -8,12 +8,10 @@ fn png_1x1() -> Vec<u8> {
     vec![
         0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
         0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-        0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, // IDAT chunk
-        0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00,
-        0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
-        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // IEND chunk
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77,
+        0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, // IDAT chunk
+        0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21,
+        0xBC, 0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // IEND chunk
         0x44, 0xAE, 0x42, 0x60, 0x82,
     ]
 }
@@ -65,7 +63,8 @@ async fn upload_unsupported_type_returns_400() {
             .unwrap(),
     );
 
-    let resp = app.client
+    let resp = app
+        .client
         .post(app.url(&format!("/api/assets/campaigns/{}", campaign_id)))
         .multipart(form)
         .send()
@@ -83,7 +82,10 @@ async fn player_cannot_upload() {
     let invite_code = campaign["invite_code"].as_str().unwrap();
 
     // Player joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -128,7 +130,8 @@ async fn list_assets_for_campaign() {
     upload_png(&app, campaign_id).await;
     upload_png(&app, campaign_id).await;
 
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/assets/campaigns/{}", campaign_id)))
         .send()
         .await
@@ -148,8 +151,12 @@ async fn list_assets_with_content_type_filter() {
     upload_png(&app, campaign_id).await;
 
     // Filter for images
-    let resp = app.client
-        .get(app.url(&format!("/api/assets/campaigns/{}?content_type=image/%25", campaign_id)))
+    let resp = app
+        .client
+        .get(app.url(&format!(
+            "/api/assets/campaigns/{}?content_type=image/%25",
+            campaign_id
+        )))
         .send()
         .await
         .unwrap();
@@ -158,8 +165,12 @@ async fn list_assets_with_content_type_filter() {
     assert_eq!(assets.len(), 1);
 
     // Filter for PDFs (should be empty)
-    let resp = app.client
-        .get(app.url(&format!("/api/assets/campaigns/{}?content_type=application/pdf", campaign_id)))
+    let resp = app
+        .client
+        .get(app.url(&format!(
+            "/api/assets/campaigns/{}?content_type=application/pdf",
+            campaign_id
+        )))
         .send()
         .await
         .unwrap();
@@ -178,7 +189,8 @@ async fn serve_asset_returns_binary_with_correct_content_type() {
     let asset: serde_json::Value = upload_resp.json().await.unwrap();
     let asset_id = asset["id"].as_str().unwrap();
 
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/assets/{}", asset_id)))
         .send()
         .await
@@ -186,7 +198,11 @@ async fn serve_asset_returns_binary_with_correct_content_type() {
 
     assert_eq!(resp.status(), 200);
     assert_eq!(
-        resp.headers().get("content-type").unwrap().to_str().unwrap(),
+        resp.headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap(),
         "image/png"
     );
     let body = resp.bytes().await.unwrap();
@@ -204,7 +220,10 @@ async fn non_member_cannot_access_assets() {
     let asset_id = asset["id"].as_str().unwrap();
 
     // Non-member tries to access
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -242,7 +261,8 @@ async fn dm_can_delete_asset() {
     let asset: serde_json::Value = upload_resp.json().await.unwrap();
     let asset_id = asset["id"].as_str().unwrap();
 
-    let resp = app.client
+    let resp = app
+        .client
         .delete(app.url(&format!("/api/assets/{}", asset_id)))
         .send()
         .await
@@ -250,7 +270,8 @@ async fn dm_can_delete_asset() {
     assert_eq!(resp.status(), 204);
 
     // Should be gone
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/assets/{}", asset_id)))
         .send()
         .await
@@ -270,7 +291,10 @@ async fn player_cannot_delete_asset() {
     let asset_id = asset["id"].as_str().unwrap();
 
     // Player joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -307,7 +331,10 @@ async fn player_can_view_assets() {
     let asset_id = asset["id"].as_str().unwrap();
 
     // Player joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({

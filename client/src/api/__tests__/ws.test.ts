@@ -22,14 +22,14 @@ describe('WsClient', () => {
     mockInstances = []
 
     // Use a real function (not arrow) so `new` works
-    const MockWS = vi.fn(function (this: any) {
+    const MockWS = vi.fn(function (this: Record<string, unknown>) {
       const instance = {
         send: vi.fn(),
         close: vi.fn(),
         readyState: 1,
-        onmessage: null as any,
-        onclose: null as any,
-        onerror: null as any,
+        onmessage: null as ((event: { data: string }) => void) | null,
+        onclose: null as (() => void) | null,
+        onerror: null as ((e: unknown) => void) | null,
       }
       mockInstances.push(instance)
       return instance
@@ -53,14 +53,14 @@ describe('WsClient', () => {
 
   it('sends JSON-serialized messages when open', () => {
     client.connect('sess')
-    client.send({ type: 'Ping' } as any)
+    client.send({ type: 'Ping' })
     expect(latestWs().send).toHaveBeenCalledWith('{"type":"Ping"}')
   })
 
   it('does not send when socket is not open', () => {
     client.connect('sess')
     latestWs().readyState = 3 // CLOSED
-    client.send({ type: 'Ping' } as any)
+    client.send({ type: 'Ping' })
     expect(latestWs().send).not.toHaveBeenCalled()
   })
 

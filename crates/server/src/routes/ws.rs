@@ -1,25 +1,22 @@
 use axum::{
+    Router,
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
         State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
     routing::get,
-    Router,
 };
 use futures_util::{SinkExt, StreamExt};
 
-use htbd_core::messages::{ClientMessage, ServerMessage};
 use crate::state::AppState;
+use htbd_core::messages::{ClientMessage, ServerMessage};
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/", get(ws_upgrade))
 }
 
-async fn ws_upgrade(
-    ws: WebSocketUpgrade,
-    State(_state): State<AppState>,
-) -> impl IntoResponse {
+async fn ws_upgrade(ws: WebSocketUpgrade, State(_state): State<AppState>) -> impl IntoResponse {
     ws.on_upgrade(handle_socket)
 }
 

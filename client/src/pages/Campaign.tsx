@@ -33,9 +33,9 @@ export function Campaign() {
           overflowY: 'auto',
         }}
       >
-        <h2>{(campaign as any).name}</h2>
+        <h2>{campaign.name}</h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
-          Invite code: {(campaign as any).invite_code}
+          Invite code: {campaign.invite_code}
         </p>
         <button onClick={() => setAssetBrowserOpen(true)}>Asset Library</button>
         <AssetBrowser campaignId={id!} open={assetBrowserOpen} onOpenChange={setAssetBrowserOpen} />

@@ -3,8 +3,8 @@ pub mod messages;
 pub mod models;
 
 // Re-export commonly used types
-pub use models::*;
 pub use messages::*;
+pub use models::*;
 
 #[cfg(test)]
 mod tests {
@@ -13,8 +13,8 @@ mod tests {
 
     #[test]
     fn export_bindings() {
-        let out_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../client/src/types");
+        let out_dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../client/src/types");
         std::fs::create_dir_all(&out_dir).unwrap();
 
         // Models

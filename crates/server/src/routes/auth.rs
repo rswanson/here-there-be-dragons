@@ -1,16 +1,16 @@
 use axum::{
+    Json, Router,
     extract::State,
     routing::{get, post},
-    Json, Router,
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use chrono::{TimeDelta, Utc};
 
+use crate::error::AppError;
+use crate::middleware::auth::{AuthUser, create_access_token, generate_refresh_token, hash_token};
+use crate::state::AppState;
 use htbd_core::auth::{AuthResponse, LoginRequest, RegisterRequest};
 use htbd_core::models::User;
-use crate::error::AppError;
-use crate::middleware::auth::{create_access_token, generate_refresh_token, hash_token, AuthUser};
-use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -21,10 +21,7 @@ pub fn routes() -> Router<AppState> {
         .route("/me", get(me))
 }
 
-async fn me(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> Result<Json<AuthResponse>, AppError> {
+async fn me(State(state): State<AppState>, auth: AuthUser) -> Result<Json<AuthResponse>, AppError> {
     let row = db::users::find_by_id(&state.pool, auth.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
@@ -47,13 +44,18 @@ async fn register(
         return Err(AppError::BadRequest("Invalid email".to_string()));
     }
     if req.password.len() < 8 {
-        return Err(AppError::BadRequest("Password must be at least 8 characters".to_string()));
+        return Err(AppError::BadRequest(
+            "Password must be at least 8 characters".to_string(),
+        ));
     }
     if req.display_name.is_empty() {
         return Err(AppError::BadRequest("Display name required".to_string()));
     }
 
-    if db::users::find_by_email(&state.pool, &req.email).await?.is_some() {
+    if db::users::find_by_email(&state.pool, &req.email)
+        .await?
+        .is_some()
+    {
         return Err(AppError::Conflict("Email already registered".to_string()));
     }
 
@@ -64,7 +66,8 @@ async fn register(
     )
     .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    let row = db::users::create_user(&state.pool, &req.email, &password_hash, &req.display_name).await?;
+    let row =
+        db::users::create_user(&state.pool, &req.email, &password_hash, &req.display_name).await?;
 
     let user = User {
         id: row.id,
@@ -86,8 +89,8 @@ async fn login(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    let valid = argon2::verify_encoded(&row.password_hash, req.password.as_bytes())
-        .unwrap_or(false);
+    let valid =
+        argon2::verify_encoded(&row.password_hash, req.password.as_bytes()).unwrap_or(false);
 
     if !valid {
         return Err(AppError::Unauthorized);
@@ -104,10 +107,7 @@ async fn login(
     Ok((jar, Json(AuthResponse { user })))
 }
 
-async fn refresh(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> Result<CookieJar, AppError> {
+async fn refresh(State(state): State<AppState>, jar: CookieJar) -> Result<CookieJar, AppError> {
     let refresh_token = jar
         .get("refresh_token")
         .map(|c| c.value().to_string())
@@ -128,10 +128,7 @@ async fn refresh(
     Ok(jar)
 }
 
-async fn logout(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> Result<CookieJar, AppError> {
+async fn logout(State(state): State<AppState>, jar: CookieJar) -> Result<CookieJar, AppError> {
     if let Some(refresh_cookie) = jar.get("refresh_token") {
         let token_hash = hash_token(refresh_cookie.value());
         if let Some(stored) = db::refresh_tokens::find_by_hash(&state.pool, &token_hash).await? {

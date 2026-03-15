@@ -1,15 +1,15 @@
 use axum::{
-    extract::{Path, State},
-    routing::{get, post, delete},
     Json, Router,
+    extract::{Path, State},
+    routing::{delete, get, post},
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
-use htbd_core::models::{Campaign, CampaignMember, CampaignRole};
 use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
+use htbd_core::models::{Campaign, CampaignMember, CampaignRole};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -35,7 +35,8 @@ async fn create_campaign(
     }
 
     let invite_code = generate_invite_code();
-    let row = db::campaigns::create_campaign(&state.pool, &req.name, auth.user_id, &invite_code).await?;
+    let row =
+        db::campaigns::create_campaign(&state.pool, &req.name, auth.user_id, &invite_code).await?;
 
     Ok(Json(Campaign {
         id: row.id,
@@ -52,14 +53,17 @@ async fn list_campaigns(
     auth: AuthUser,
 ) -> Result<Json<Vec<Campaign>>, AppError> {
     let rows = db::campaigns::list_for_user(&state.pool, auth.user_id).await?;
-    let campaigns = rows.into_iter().map(|r| Campaign {
-        id: r.id,
-        name: r.name,
-        owner_id: r.owner_id,
-        invite_code: r.invite_code,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-    }).collect();
+    let campaigns = rows
+        .into_iter()
+        .map(|r| Campaign {
+            id: r.id,
+            name: r.name,
+            owner_id: r.owner_id,
+            invite_code: r.invite_code,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        })
+        .collect();
     Ok(Json(campaigns))
 }
 
@@ -92,13 +96,16 @@ async fn list_members(
     require_member(&state, id, auth.user_id).await?;
 
     let rows = db::campaigns::list_members(&state.pool, id).await?;
-    let members = rows.into_iter().map(|r| CampaignMember {
-        campaign_id: r.campaign_id,
-        user_id: r.user_id,
-        role: r.role.parse().unwrap_or(CampaignRole::Player),
-        display_name: r.display_name,
-        joined_at: r.joined_at,
-    }).collect();
+    let members = rows
+        .into_iter()
+        .map(|r| CampaignMember {
+            campaign_id: r.campaign_id,
+            user_id: r.user_id,
+            role: r.role.parse().unwrap_or(CampaignRole::Player),
+            display_name: r.display_name,
+            joined_at: r.joined_at,
+        })
+        .collect();
     Ok(Json(members))
 }
 
@@ -135,7 +142,11 @@ async fn remove_member(
 
 // --- Helpers ---
 
-async fn require_member(state: &AppState, campaign_id: Uuid, user_id: Uuid) -> Result<String, AppError> {
+async fn require_member(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+) -> Result<String, AppError> {
     db::campaigns::get_member_role(&state.pool, campaign_id, user_id)
         .await?
         .ok_or(AppError::Forbidden)

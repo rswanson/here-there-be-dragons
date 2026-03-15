@@ -7,7 +7,8 @@ async fn create_campaign_returns_campaign_with_invite_code() {
     let app = spawn_app().await;
     register_user(&app, "dm@example.com", "password123", "DM").await;
 
-    let resp = app.client
+    let resp = app
+        .client
         .post(app.url("/api/campaigns"))
         .json(&serde_json::json!({ "name": "Dragon's Lair" }))
         .send()
@@ -28,7 +29,8 @@ async fn create_campaign_empty_name_returns_400() {
     let app = spawn_app().await;
     register_user(&app, "dm@example.com", "password123", "DM").await;
 
-    let resp = app.client
+    let resp = app
+        .client
         .post(app.url("/api/campaigns"))
         .json(&serde_json::json!({ "name": "" }))
         .send()
@@ -42,7 +44,10 @@ async fn create_campaign_empty_name_returns_400() {
 async fn create_campaign_unauthenticated_returns_401() {
     let app = spawn_app().await;
 
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     let resp = client2
         .post(app.url("/api/campaigns"))
         .json(&serde_json::json!({ "name": "Secret Campaign" }))
@@ -66,7 +71,8 @@ async fn list_campaigns_returns_only_member_campaigns() {
         .await
         .unwrap();
 
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url("/api/campaigns"))
         .send()
         .await
@@ -77,7 +83,10 @@ async fn list_campaigns_returns_only_member_campaigns() {
     assert_eq!(campaigns[0]["name"], "Campaign A");
 
     // User 2 should see no campaigns
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -89,11 +98,7 @@ async fn list_campaigns_returns_only_member_campaigns() {
         .await
         .unwrap();
 
-    let resp = client2
-        .get(app.url("/api/campaigns"))
-        .send()
-        .await
-        .unwrap();
+    let resp = client2.get(app.url("/api/campaigns")).send().await.unwrap();
     assert_eq!(resp.status(), 200);
     let campaigns: Vec<serde_json::Value> = resp.json().await.unwrap();
     assert!(campaigns.is_empty());
@@ -105,7 +110,8 @@ async fn get_campaign_as_member() {
     let campaign = create_test_campaign(&app, "dm@example.com", "My Campaign").await;
     let id = campaign["id"].as_str().unwrap();
 
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/campaigns/{}", id)))
         .send()
         .await
@@ -123,7 +129,10 @@ async fn get_campaign_non_member_returns_403() {
     let id = campaign["id"].as_str().unwrap();
 
     // Register a different user
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -151,7 +160,10 @@ async fn join_campaign_via_invite_code() {
     let invite_code = campaign["invite_code"].as_str().unwrap();
 
     // New user joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -174,11 +186,7 @@ async fn join_campaign_via_invite_code() {
     assert_eq!(body["name"], "Open Campaign");
 
     // Player should now see the campaign in their list
-    let resp = client2
-        .get(app.url("/api/campaigns"))
-        .send()
-        .await
-        .unwrap();
+    let resp = client2.get(app.url("/api/campaigns")).send().await.unwrap();
     let campaigns: Vec<serde_json::Value> = resp.json().await.unwrap();
     assert_eq!(campaigns.len(), 1);
 }
@@ -188,7 +196,8 @@ async fn join_campaign_invalid_code_returns_404() {
     let app = spawn_app().await;
     register_user(&app, "user@example.com", "password123", "User").await;
 
-    let resp = app.client
+    let resp = app
+        .client
         .post(app.url("/api/campaigns/join/invalidcode123"))
         .send()
         .await
@@ -205,7 +214,10 @@ async fn list_members_shows_all_with_roles() {
     let invite_code = campaign["invite_code"].as_str().unwrap();
 
     // Player joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -223,7 +235,8 @@ async fn list_members_shows_all_with_roles() {
         .unwrap();
 
     // DM lists members
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/campaigns/{}/members", id)))
         .send()
         .await
@@ -233,7 +246,10 @@ async fn list_members_shows_all_with_roles() {
     let members: Vec<serde_json::Value> = resp.json().await.unwrap();
     assert_eq!(members.len(), 2);
 
-    let roles: Vec<&str> = members.iter().map(|m| m["role"].as_str().unwrap()).collect();
+    let roles: Vec<&str> = members
+        .iter()
+        .map(|m| m["role"].as_str().unwrap())
+        .collect();
     assert!(roles.contains(&"dm"));
     assert!(roles.contains(&"player"));
 }
@@ -246,7 +262,10 @@ async fn dm_can_remove_player() {
     let invite_code = campaign["invite_code"].as_str().unwrap();
 
     // Player joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     let player_resp = client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -267,7 +286,8 @@ async fn dm_can_remove_player() {
         .unwrap();
 
     // DM removes player
-    let resp = app.client
+    let resp = app
+        .client
         .delete(app.url(&format!("/api/campaigns/{}/members/{}", id, player_id)))
         .send()
         .await
@@ -275,7 +295,8 @@ async fn dm_can_remove_player() {
     assert_eq!(resp.status(), 200);
 
     // Player should no longer be in the campaign
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/campaigns/{}/members", id)))
         .send()
         .await
@@ -291,7 +312,8 @@ async fn player_cannot_remove_members() {
     let campaign = create_test_campaign(&app, "dm@example.com", "Protected Campaign").await;
     let id = campaign["id"].as_str().unwrap();
     let invite_code = campaign["invite_code"].as_str().unwrap();
-    let dm_body: serde_json::Value = app.client
+    let dm_body: serde_json::Value = app
+        .client
         .get(app.url("/api/auth/me"))
         .send()
         .await
@@ -302,7 +324,10 @@ async fn player_cannot_remove_members() {
     let dm_id = dm_body["user"]["id"].as_str().unwrap();
 
     // Player joins
-    let client2 = reqwest::Client::builder().cookie_store(true).build().unwrap();
+    let client2 = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
     client2
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
@@ -344,7 +369,8 @@ async fn dm_cannot_be_removed() {
 
     // Should succeed as a request but the DM row shouldn't be deleted (role != 'dm' filter)
     // Verify DM is still a member
-    let resp = app.client
+    let resp = app
+        .client
         .get(app.url(&format!("/api/campaigns/{}/members", id)))
         .send()
         .await

@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Application, Sprite } from 'pixi.js'
 import { useUiStore } from '../state/ui'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
+
+type PixiApp = Application & { _resizeObserver?: ResizeObserver }
 
 export function CanvasView() {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [status, setStatus] = useState<CanvasStatus>('loading')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const appRef = useRef<any>(null)
-  const spriteRef = useRef<any>(null)
+  const appRef = useRef<PixiApp | null>(null)
+  const spriteRef = useRef<Sprite | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export function CanvasView() {
           }
         })
         observer.observe(container)
-        ;(app as any)._resizeObserver = observer
+        ;(app as PixiApp)._resizeObserver = observer
       } catch (err) {
         console.error('PixiJS init failed:', err)
         if (mounted) {

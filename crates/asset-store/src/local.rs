@@ -57,7 +57,10 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let storage = LocalStorage::new(dir.path().to_path_buf());
 
-        storage.store("test/file.txt", b"hello world").await.unwrap();
+        storage
+            .store("test/file.txt", b"hello world")
+            .await
+            .unwrap();
         let data = storage.retrieve("test/file.txt").await.unwrap();
         assert_eq!(data, b"hello world");
     }

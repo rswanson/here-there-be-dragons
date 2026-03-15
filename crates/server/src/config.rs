@@ -12,13 +12,10 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Self {
         Self {
-            database_url: std::env::var("DATABASE_URL")
-                .expect("DATABASE_URL must be set"),
-            jwt_secret: std::env::var("JWT_SECRET")
-                .expect("JWT_SECRET must be set"),
+            database_url: std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"),
+            jwt_secret: std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
             asset_storage_path: PathBuf::from(
-                std::env::var("ASSET_STORAGE_PATH")
-                    .unwrap_or_else(|_| "./data/assets".to_string()),
+                std::env::var("ASSET_STORAGE_PATH").unwrap_or_else(|_| "./data/assets".to_string()),
             ),
             bind_address: std::env::var("BIND_ADDRESS")
                 .unwrap_or_else(|_| "0.0.0.0:3000".to_string()),

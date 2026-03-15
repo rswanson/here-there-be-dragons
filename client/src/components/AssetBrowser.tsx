@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { useUiStore } from '../state/ui'
+import type { Asset } from '../types/Asset'
 
 export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient()
@@ -40,7 +41,7 @@ export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: s
     e.target.value = ''
   }
 
-  const handleDelete = (asset: any) => {
+  const handleDelete = (asset: Asset) => {
     if (window.confirm(`Delete "${asset.filename}"?`)) {
       deleteMutation.mutate(asset.id)
     }
@@ -128,7 +129,7 @@ export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: s
             gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
             gap: 'var(--space-sm)',
           }}>
-            {(assets as any)?.map((asset: any) => (
+            {assets?.map((asset) => (
               <div
                 key={asset.id}
                 style={{

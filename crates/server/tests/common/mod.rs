@@ -33,7 +33,9 @@ impl Drop for TestApp {
         tokio::spawn(async move {
             pool.close().await;
             // Connect to admin db to drop the test database
-            if let Ok(admin) = PgPool::connect("postgres://dragons:dragons@localhost:5432/postgres").await {
+            if let Ok(admin) =
+                PgPool::connect("postgres://dragons:dragons@localhost:5432/postgres").await
+            {
                 let _ = sqlx::query(&format!("DROP DATABASE IF EXISTS \"{}\"", db_name))
                     .execute(&admin)
                     .await;
@@ -47,10 +49,19 @@ impl Drop for TestApp {
 /// Requires the dev PostgreSQL from docker-compose.dev.yml to be running.
 pub async fn spawn_app() -> TestApp {
     let db_num = DB_COUNTER.fetch_add(1, Ordering::SeqCst);
-    let db_name = format!("dragons_test_{}_{}_{}", std::process::id(), db_num, std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() % 100000);
+    let db_name = format!(
+        "dragons_test_{}_{}_{}",
+        std::process::id(),
+        db_num,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            % 100000
+    );
 
-    let admin_pool = PgPool::connect("postgres://dragons:dragons@localhost:5432/postgres").await
+    let admin_pool = PgPool::connect("postgres://dragons:dragons@localhost:5432/postgres")
+        .await
         .expect("Failed to connect to PostgreSQL. Is docker-compose.dev.yml running?");
 
     sqlx::query(&format!("CREATE DATABASE \"{}\"", db_name))
@@ -60,10 +71,12 @@ pub async fn spawn_app() -> TestApp {
     admin_pool.close().await;
 
     let database_url = format!("postgres://dragons:dragons@localhost:5432/{}", db_name);
-    let pool = db::create_pool(&database_url).await
+    let pool = db::create_pool(&database_url)
+        .await
         .expect("Failed to connect to test database");
 
-    db::run_migrations(&pool).await
+    db::run_migrations(&pool)
+        .await
         .expect("Failed to run migrations");
 
     let asset_dir = TempDir::new().expect("Failed to create temp dir");
@@ -110,8 +123,14 @@ pub async fn spawn_app() -> TestApp {
 }
 
 /// Register a user and return the response. Keeps cookies in the client jar.
-pub async fn register_user(app: &TestApp, email: &str, password: &str, display_name: &str) -> reqwest::Response {
-    let resp = app.client
+pub async fn register_user(
+    app: &TestApp,
+    email: &str,
+    password: &str,
+    display_name: &str,
+) -> reqwest::Response {
+    let resp = app
+        .client
         .post(app.url("/api/auth/register"))
         .json(&serde_json::json!({
             "email": email,
@@ -122,19 +141,30 @@ pub async fn register_user(app: &TestApp, email: &str, password: &str, display_n
         .await
         .expect("Failed to send register request");
 
-    assert!(resp.status().is_success(), "Registration failed with status {}", resp.status());
+    assert!(
+        resp.status().is_success(),
+        "Registration failed with status {}",
+        resp.status()
+    );
     resp
 }
 
 /// Register + create a campaign, returning campaign JSON.
 pub async fn create_test_campaign(app: &TestApp, email: &str, name: &str) -> serde_json::Value {
     register_user(app, email, "password123", "Test User").await;
-    let resp = app.client
+    let resp = app
+        .client
         .post(app.url("/api/campaigns"))
         .json(&serde_json::json!({ "name": name }))
         .send()
         .await
         .expect("Failed to create campaign");
-    assert!(resp.status().is_success(), "Campaign creation failed with status {}", resp.status());
-    resp.json().await.expect("Failed to parse campaign response")
+    assert!(
+        resp.status().is_success(),
+        "Campaign creation failed with status {}",
+        resp.status()
+    );
+    resp.json()
+        .await
+        .expect("Failed to parse campaign response")
 }

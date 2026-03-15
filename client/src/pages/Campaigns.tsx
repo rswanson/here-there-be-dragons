@@ -77,9 +77,9 @@ export function Campaigns() {
 
       <section style={{ marginTop: 'var(--space-lg)' }}>
         <h2>Your Campaigns</h2>
-        {(campaigns as any)?.length === 0 && <p>No campaigns yet.</p>}
+        {campaigns?.length === 0 && <p>No campaigns yet.</p>}
         <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-          {(campaigns as any)?.map((c: any) => (
+          {campaigns?.map((c) => (
             <li key={c.id}>
               <Link
                 to={`/campaigns/${c.id}`}

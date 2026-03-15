@@ -16,10 +16,10 @@ export function Register() {
     setError('')
     try {
       const res = await api.auth.register({ email, password, display_name: displayName })
-      setUser((res as any).user)
+      setUser(res.user)
       navigate('/campaigns')
     } catch (err) {
-      setError((err as any).message || 'Registration failed')
+      setError(err instanceof Error ? err.message : 'Registration failed')
     }
   }
 

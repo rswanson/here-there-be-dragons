@@ -1,10 +1,10 @@
-pub mod auth;
 pub mod assets;
+pub mod auth;
 pub mod campaigns;
 pub mod ws;
 
-use axum::Router;
 use crate::state::AppState;
+use axum::Router;
 
 pub fn api_routes() -> Router<AppState> {
     Router::new()

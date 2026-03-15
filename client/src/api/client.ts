@@ -1,3 +1,7 @@
+import type { AuthResponse } from '../types/AuthResponse'
+import type { Campaign } from '../types/Campaign'
+import type { Asset } from '../types/Asset'
+
 const BASE_URL = '/api'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -49,22 +53,22 @@ export class ApiError extends Error {
 export const api = {
   auth: {
     register: (data: { email: string; password: string; display_name: string }) =>
-      request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+      request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
     login: (data: { email: string; password: string }) =>
-      request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-    logout: () => request('/auth/logout', { method: 'POST' }),
-    me: () => request('/auth/me'),
+      request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    logout: () => request<void>('/auth/logout', { method: 'POST' }),
+    me: () => request<AuthResponse>('/auth/me'),
   },
   campaigns: {
-    list: () => request('/campaigns'),
+    list: () => request<Campaign[]>('/campaigns'),
     create: (data: { name: string }) =>
-      request('/campaigns', { method: 'POST', body: JSON.stringify(data) }),
-    get: (id: string) => request(`/campaigns/${id}`),
+      request<Campaign>('/campaigns', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => request<Campaign>(`/campaigns/${id}`),
     join: (inviteCode: string) =>
-      request(`/campaigns/join/${inviteCode}`, { method: 'POST' }),
+      request<Campaign>(`/campaigns/join/${inviteCode}`, { method: 'POST' }),
     members: (id: string) => request(`/campaigns/${id}/members`),
     removeMember: (campaignId: string, userId: string) =>
-      request(`/campaigns/${campaignId}/members/${userId}`, { method: 'DELETE' }),
+      request<void>(`/campaigns/${campaignId}/members/${userId}`, { method: 'DELETE' }),
   },
   assets: {
     list: (campaignId: string, params?: { content_type?: string; limit?: number; offset?: number }) => {
@@ -73,9 +77,9 @@ export const api = {
       if (params?.limit) searchParams.set('limit', String(params.limit))
       if (params?.offset) searchParams.set('offset', String(params.offset))
       const qs = searchParams.toString()
-      return request(`/assets/campaigns/${campaignId}${qs ? `?${qs}` : ''}`)
+      return request<Asset[]>(`/assets/campaigns/${campaignId}${qs ? `?${qs}` : ''}`)
     },
-    upload: async (campaignId: string, file: File) => {
+    upload: async (campaignId: string, file: File): Promise<Asset> => {
       const form = new FormData()
       form.append('file', file)
       const res = await fetch(`${BASE_URL}/assets/campaigns/${campaignId}`, {
@@ -87,7 +91,7 @@ export const api = {
       return res.json()
     },
     delete: (id: string) =>
-      request(`/assets/${id}`, { method: 'DELETE' }),
+      request<void>(`/assets/${id}`, { method: 'DELETE' }),
     url: (id: string) => `${BASE_URL}/assets/${id}`,
   },
 }

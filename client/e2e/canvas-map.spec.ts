@@ -205,8 +205,6 @@ test.describe('Canvas & Map Loading', () => {
 
   test('canvas shows status indicator while loading', async ({ page }) => {
     // Register and create campaign via API for speed
-    const baseUrl = 'http://localhost:5173'
-
     await page.goto('/register')
     await page.getByLabel('Display Name').fill(`Status-${timestamp}`)
     await page.getByLabel('Email').fill(`e2e-status-${timestamp}@test.com`)

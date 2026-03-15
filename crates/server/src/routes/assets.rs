@@ -1,21 +1,24 @@
 use axum::{
+    Json, Router,
     extract::{Multipart, Path, Query, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
-use htbd_core::models::Asset;
 use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
+use htbd_core::models::Asset;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/campaigns/{campaign_id}", post(upload_asset).get(list_assets))
+        .route(
+            "/campaigns/{campaign_id}",
+            post(upload_asset).get(list_assets),
+        )
         .route("/{id}", get(serve_asset).delete(delete_asset))
 }
 
@@ -46,18 +49,20 @@ async fn upload_asset(
         .map_err(|e| AppError::BadRequest(e.to_string()))?
         .ok_or_else(|| AppError::BadRequest("No file provided".to_string()))?;
 
-    let filename = field.file_name()
-        .unwrap_or("unknown")
-        .to_string();
-    let content_type = field.content_type()
+    let filename = field.file_name().unwrap_or("unknown").to_string();
+    let content_type = field
+        .content_type()
         .unwrap_or("application/octet-stream")
         .to_string();
 
     if !ALLOWED_CONTENT_TYPES.contains(&content_type.as_str()) {
-        return Err(AppError::BadRequest(format!("Unsupported file type: {content_type}")));
+        return Err(AppError::BadRequest(format!(
+            "Unsupported file type: {content_type}"
+        )));
     }
 
-    let data = field.bytes()
+    let data = field
+        .bytes()
         .await
         .map_err(|e| AppError::BadRequest(e.to_string()))?;
 
@@ -122,15 +127,18 @@ async fn list_assets(
     )
     .await?;
 
-    let assets = rows.into_iter().map(|r| Asset {
-        id: r.id,
-        campaign_id: r.campaign_id,
-        uploaded_by: r.uploaded_by,
-        filename: r.filename,
-        content_type: r.content_type,
-        size_bytes: r.size_bytes,
-        created_at: r.created_at,
-    }).collect();
+    let assets = rows
+        .into_iter()
+        .map(|r| Asset {
+            id: r.id,
+            campaign_id: r.campaign_id,
+            uploaded_by: r.uploaded_by,
+            filename: r.filename,
+            content_type: r.content_type,
+            size_bytes: r.size_bytes,
+            created_at: r.created_at,
+        })
+        .collect();
 
     Ok(Json(assets))
 }
@@ -153,7 +161,10 @@ async fn serve_asset(
     Ok((
         [
             (header::CONTENT_TYPE, row.content_type),
-            (header::CONTENT_DISPOSITION, format!("inline; filename=\"{}\"", row.filename)),
+            (
+                header::CONTENT_DISPOSITION,
+                format!("inline; filename=\"{}\"", row.filename),
+            ),
         ],
         data,
     ))

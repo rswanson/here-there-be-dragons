@@ -15,10 +15,10 @@ export function Login() {
     setError('')
     try {
       const res = await api.auth.login({ email, password })
-      setUser((res as any).user)
+      setUser(res.user)
       navigate('/campaigns')
     } catch (err) {
-      setError((err as any).message || 'Login failed')
+      setError(err instanceof Error ? err.message : 'Login failed')
     }
   }
 
