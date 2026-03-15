@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO campaign_members (campaign_id, user_id, role) VALUES ($1, $2, 'dm')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d971ba8275bb4b7064d8e3555cfd813410a0e949df80d2f0b78a59d4874f53f7"
+}
