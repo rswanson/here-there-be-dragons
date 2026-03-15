@@ -2,7 +2,7 @@ mod common;
 
 use common::spawn_app;
 use futures_util::{SinkExt, StreamExt};
-use tokio_tungstenite::tungstenite::{Message, handshake::client::IntoClientRequest};
+use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest};
 
 /// Register a user and return the access_token cookie value.
 async fn get_auth_cookie(app: &common::TestApp) -> String {
