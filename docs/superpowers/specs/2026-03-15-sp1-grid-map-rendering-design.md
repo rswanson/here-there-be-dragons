@@ -151,7 +151,7 @@ New maps start with three layers:
 
 Each token belongs to a layer and has:
 - `id`, `name`, `asset_id` (reference to SP-0 asset library), `owner_id` (player who controls it)
-- `x`, `y` (grid coordinates, fractional for gridless), `size` (1–4, representing NxN grid squares), `rotation` (degrees)
+- `x`, `y` (grid coordinates of the top-left cell, fractional for gridless), `size` (1–4, representing NxN grid squares), `rotation` (degrees)
 - `bars` (array, up to 3), `status_markers` (array of marker IDs)
 
 ### Token Bars
@@ -271,7 +271,7 @@ Raw mouse points simplified via Ramer-Douglas-Peucker algorithm after stroke end
 
 ### Diagonal Measurement
 
-Three modes, configurable per-campaign:
+Three modes, configurable per-map (stored on the `maps` table so different maps can use different rules):
 - **D&D standard (default):** alternating 5/10/5/10 for diagonals (3.5e PHB rule)
 - **Euclidean:** actual distance (√2 × grid size per diagonal)
 - **Manhattan:** no diagonal movement discount, each square = 1 unit
@@ -290,8 +290,13 @@ CREATE TABLE maps (
     name             TEXT NOT NULL,
     grid_enabled     BOOLEAN NOT NULL DEFAULT true,
     grid_size_px     INTEGER NOT NULL DEFAULT 70,
+    grid_color       TEXT NOT NULL DEFAULT '#000000',
+    grid_opacity     REAL NOT NULL DEFAULT 0.3,
+    grid_line_width  REAL NOT NULL DEFAULT 1.0,
     grid_scale       REAL NOT NULL DEFAULT 5.0,
     grid_scale_unit  TEXT NOT NULL DEFAULT 'ft',
+    snap_mode        TEXT NOT NULL DEFAULT 'center'
+                     CHECK (snap_mode IN ('off', 'center', 'corner')),
     diagonal_mode    TEXT NOT NULL DEFAULT 'dnd_standard'
                      CHECK (diagonal_mode IN ('dnd_standard', 'euclidean', 'manhattan')),
     width_squares    INTEGER NOT NULL DEFAULT 30,
