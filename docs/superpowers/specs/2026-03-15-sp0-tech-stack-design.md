@@ -4,6 +4,7 @@ The foundational architecture and tech stack for Here There Be Dragons. Every su
 
 **Parent spec:** [Here There Be Dragons Design Spec](2026-03-15-here-there-be-dragons-design.md)
 **Roadmap:** [Phase 1 Roadmap](../plans/2026-03-15-phase1-roadmap.md)
+**License:** AGPL-3.0 — ensures the project stays open-source even when hosted as a service, while remaining compatible with the Rust and JavaScript ecosystems. All dependencies must be AGPL-compatible.
 
 ---
 
@@ -12,7 +13,7 @@ The foundational architecture and tech stack for Here There Be Dragons. Every su
 | Layer | Choice | Key Dependencies |
 |-------|--------|-----------------|
 | Frontend | React + TypeScript | Vite, PixiJS, Zustand, TanStack Query |
-| Canvas rendering | PixiJS (WebGL) | `@pixi/react` or custom integration |
+| Canvas rendering | PixiJS (WebGL) | Custom integration via React ref |
 | Backend | Rust + Axum | `tokio`, `tower`, `serde`, `tracing` |
 | Database | PostgreSQL | `sqlx` (compile-time checked queries) |
 | Real-time | WebSockets | Axum built-in WebSocket support |
@@ -86,6 +87,38 @@ Game state for active sessions lives in memory for fast reads and broadcasting. 
 
 If the server restarts, it reloads from the database. No state is lost.
 
+### WebSocket Message Format
+
+All WebSocket messages are JSON with a typed envelope. Message types are defined as Rust enums in the `core` crate and exported to TypeScript via `ts-rs`.
+
+```rust
+// Defined in core crate
+#[derive(Serialize, Deserialize, TS)]
+#[serde(tag = "type", content = "payload")]
+enum ClientMessage {
+    MoveToken { token_id: Uuid, x: f64, y: f64 },
+    ChatMessage { content: String, character_id: Option<Uuid> },
+    RollDice { expression: String },
+    // ... added by sub-projects
+}
+
+#[derive(Serialize, Deserialize, TS)]
+#[serde(tag = "type", content = "payload")]
+enum ServerMessage {
+    TokenMoved { token_id: Uuid, x: f64, y: f64, moved_by: Uuid },
+    ChatReceived { message: ChatMsg },
+    DiceResult { result: RollResult },
+    Error { code: String, message: String },
+    // ... added by sub-projects
+}
+```
+
+The `serde(tag = "type")` attribute produces JSON like `{"type": "MoveToken", "payload": {"token_id": "...", "x": 5.0, "y": 3.0}}`, which is easy to discriminate on the client side. SP-0 defines the envelope structure and a minimal set of message types; each subsequent sub-project adds its own variants.
+
+### Future WebRTC Signaling
+
+The Axum route structure should reserve a namespace (e.g., `/api/rtc/`) for WebRTC signaling endpoints that SP-6 (Audio/Video Chat) will implement. SP-0 does not implement these routes — just avoids conflicts.
+
 ### Key Crates
 
 - `axum` — HTTP routing, WebSocket upgrade, middleware
@@ -107,19 +140,21 @@ If the server restarts, it reloads from the database. No state is lost.
 
 The UI has two fundamentally different rendering layers:
 
-1. **PixiJS canvas** — maps, tokens, grid, drawing tools, lighting. WebGL-rendered. React does not manage this directly — React manages the controls *around* the canvas (toolbars, menus, settings), but PixiJS owns the canvas rendering.
+1. **PixiJS canvas** — maps, tokens, grid, drawing tools, lighting. WebGL-rendered. React does not manage the canvas directly — a React component provides a `<canvas>` ref and initializes the PixiJS `Application` on mount. React manages the controls *around* the canvas (toolbars, menus, settings), but PixiJS owns all canvas rendering. We do not use `@pixi/react` — it adds coupling between React's render cycle and PixiJS for no benefit given our architecture.
 
 2. **React application UI** — everything else: chat panel, character sheets, initiative tracker, handouts, campaign management, settings. Standard React components built on Radix primitives.
 
 ### State Management
 
-- **Zustand** for client-side state — session state (who's connected, permissions), UI state (active tool, selected token, panel visibility), local user preferences.
+- **Zustand** for client-side state, organized as separate stores by domain: a `sessionStore` (who's connected, permissions, game state from WebSocket), a `uiStore` (active tool, selected token, panel visibility), and a `prefsStore` (local user preferences, persisted to localStorage). Separate stores avoid a monolithic state blob and allow independent subscriptions.
 - **WebSocket messages** are the source of truth for game state. Server broadcasts a delta → Zustand store updates → React re-renders UI + PixiJS updates canvas. One incoming flow, two rendering targets.
 - **TanStack Query** for REST API calls — campaign list, character loading, asset management. Handles caching, refetching, and loading states.
 
 ### Type Safety Across the Boundary
 
-`ts-rs` generates TypeScript interfaces from Rust structs in the `core` crate. A `build.rs` script in the `server` crate runs the export on every `cargo build`, writing generated types to `client/src/types/generated.ts`. The Vite dev server picks up the file change and hot-reloads. Every API response and WebSocket message type is defined once in Rust and automatically available in TypeScript.
+`ts-rs` generates TypeScript interfaces from Rust structs in the `core` crate. All shared types derive the `TS` trait. Type export is triggered via `#[test] fn export_bindings()` tests (the standard `ts-rs` pattern) that write to `client/src/types/generated.ts`. A `cargo test` run regenerates all types. For the dev workflow, `cargo watch` is configured to run tests on change, so types stay in sync automatically. The Vite dev server picks up the file change and hot-reloads.
+
+Every API response and WebSocket message type is defined once in Rust and automatically available in TypeScript.
 
 ---
 
@@ -129,7 +164,10 @@ The UI has two fundamentally different rendering layers:
 
 - Email/password registration and login
 - Passwords hashed with Argon2
-- JWT tokens for session management (access token + refresh token)
+- JWT access tokens (short-lived, 15 minutes) + refresh tokens (long-lived, 7 days)
+- Access token stored in httpOnly cookie; refresh token stored in httpOnly cookie on a `/api/auth/refresh` path
+- Refresh tokens stored in the database (a `refresh_tokens` table) so they can be revoked
+- Token refresh: client calls `/api/auth/refresh` when access token expires; server validates refresh token, issues new access token, rotates refresh token
 - Tokens stored in httpOnly cookies (not localStorage — XSS protection)
 
 ### Authorization
@@ -152,6 +190,8 @@ Two roles per campaign: **DM** and **Player**.
 ### Campaign Access
 
 DM creates a campaign and gets an invite link (unique invite code). Players join via the link. DM can remove players. No public campaign discovery.
+
+The campaign owner (creator) is automatically added to `campaign_members` as the sole DM. The schema enforces at most one DM per campaign via a unique partial index: `CREATE UNIQUE INDEX one_dm_per_campaign ON campaign_members (campaign_id) WHERE role = 'dm'`. This aligns with the parent spec's single-DM assumption.
 
 ---
 
@@ -188,6 +228,15 @@ CREATE TABLE campaign_members (
     PRIMARY KEY (campaign_id, user_id)
 );
 
+-- Refresh tokens (for JWT rotation)
+CREATE TABLE refresh_tokens (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash     TEXT NOT NULL,
+    expires_at     TIMESTAMPTZ NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Uploaded assets (maps, tokens, portraits, etc.)
 CREATE TABLE assets (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -200,6 +249,40 @@ CREATE TABLE assets (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
+
+---
+
+## Asset Library
+
+The asset library is how maps, tokens, portraits, and other files get into the system. SP-0 delivers a functional asset library — upload, browse, and delete.
+
+### REST API Endpoints
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `POST` | `/api/campaigns/:id/assets` | Upload file (multipart form) | DM only |
+| `GET` | `/api/campaigns/:id/assets` | List assets (paginated, filterable by content type) | Campaign members |
+| `GET` | `/api/assets/:id` | Download/serve asset file | Campaign members |
+| `DELETE` | `/api/assets/:id` | Delete asset | DM only |
+
+### Upload Handling
+
+- Multipart form upload with file and optional metadata
+- File type validation: images (PNG, JPEG, WebP, SVG), PDFs (for handouts)
+- Size limit: configurable via env var `MAX_UPLOAD_SIZE_MB` (default: 25MB)
+- Thumbnail generation for images (stored alongside original) for grid/list views in the asset browser
+- Files stored via the `StorageBackend` trait — local filesystem or S3
+
+### Client-Side Asset Browser
+
+A React component (Radix dialog) for browsing, uploading, and managing campaign assets:
+
+- Grid view with thumbnails and list view with file details
+- Filter by type (maps, tokens, portraits, handouts)
+- Drag-and-drop upload
+- Delete with confirmation
+
+Tagging and folder organization are deferred — the initial asset library is a flat list filtered by content type. Tags can be added later via a migration without architectural changes.
 
 ---
 
@@ -241,7 +324,26 @@ The PixiJS canvas is inherently inaccessible to screen readers. For canvas inter
 - `vite dev` — React dev server with HMR, proxies API/WebSocket calls to the Rust server
 - `docker compose up db` — PostgreSQL only for local dev
 - `sqlx migrate run` — apply database migrations
-- TypeScript types regenerate automatically on every Rust build — zero manual steps
+- `cargo sqlx prepare` — generate offline query data (`.sqlx/` directory, committed to repo) so CI and other developers can build without a live database
+- TypeScript types regenerate automatically on every `cargo test` run via `ts-rs` export tests
+
+### Testing
+
+**Backend (Rust):**
+- Auth flows: registration, login, JWT issuance/refresh, password hashing
+- Asset upload/download: file validation, storage/retrieval, size limits
+- Campaign CRUD: creation, invite code generation, member join/leave, permissions
+- Database migrations: verify all migrations apply cleanly to a fresh database
+- WebSocket: connection establishment, message serialization/deserialization
+
+**Frontend (React):**
+- Component rendering: key UI components render without errors
+- API client: REST and WebSocket client handle success/error cases
+- Type generation: verify generated TypeScript types compile
+
+**Integration:**
+- Full auth flow: register → login → create campaign → invite → join
+- Asset upload: upload file via API → verify it's retrievable → verify thumbnail generated
 
 ### CI Pipeline (GitHub Actions)
 
@@ -309,6 +411,7 @@ Environment variables only. No config files. Everything configurable via the `en
 | `S3_BUCKET` | No | S3 bucket name (enables S3 storage) |
 | `S3_REGION` | No | AWS region for S3 |
 | `BIND_ADDRESS` | No | Server bind address (default: `0.0.0.0:3000`) |
+| `MAX_UPLOAD_SIZE_MB` | No | Maximum asset upload size (default: 25) |
 
 ---
 
