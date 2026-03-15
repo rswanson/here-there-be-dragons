@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { CanvasView } from '../canvas/CanvasView'
+import { AssetBrowser } from '../components/AssetBrowser'
 
 export function Campaign() {
   const { id } = useParams<{ id: string }>()
+  const [assetBrowserOpen, setAssetBrowserOpen] = useState(false)
 
   const { data: campaign, isLoading } = useQuery({
     queryKey: ['campaign', id],
@@ -34,6 +37,8 @@ export function Campaign() {
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
           Invite code: {(campaign as any).invite_code}
         </p>
+        <button onClick={() => setAssetBrowserOpen(true)}>Asset Library</button>
+        <AssetBrowser campaignId={id!} open={assetBrowserOpen} onOpenChange={setAssetBrowserOpen} />
       </aside>
     </div>
   )
