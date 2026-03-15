@@ -164,6 +164,26 @@ A DM prep tool that generates battle maps from natural language descriptions, co
 
 Like the voice module, this depends on external AI services (image generation models). It should support BYO API key and ideally multiple providers. The interface should be defined early so it can be built as a module.
 
+### AI Token Generation (DM Tool)
+
+A companion to AI map generation — generates character and creature tokens from natural language descriptions, sized and formatted correctly for the VTT grid.
+
+**How it works:**
+
+1. The DM describes the character or creature: *"A grizzled half-orc blacksmith with a burn scar across his left cheek, wearing a leather apron"*
+2. The system generates a token in the correct size and format — circular crop, transparent background, grid-aligned dimensions
+3. The DM iterates: *"Make him look angrier. Add a hammer in his right hand."*
+4. Once satisfied, the token is saved to the campaign asset library, ready to drop on any map
+
+**Design principles:**
+
+- **Grid-correct** — tokens are generated at the exact pixel dimensions the VTT expects. A medium creature is 1x1 squares, a large creature is 2x2, etc. No manual resizing.
+- **Style-consistent** — like maps, tokens should support style presets so a campaign's tokens feel cohesive (painted fantasy, sketch, realistic, etc.)
+- **Iterative** — refine through conversation, not start-from-scratch
+- **Batch-friendly** — a DM prepping a goblin ambush should be able to say "generate 4 distinct goblin warriors" and get a set that look related but distinguishable
+
+Same provider model as map generation — BYO API key, multiple provider support, modular interface.
+
 ### Content & Communication
 - Handouts and journals (player-visible vs. DM-only)
 - Text chat with roll integration and whispers
@@ -272,7 +292,7 @@ Player speaks → STT → LLM generates response → TTS → Player hears NPC
 ### Phase 1: Exceptional Virtual Tabletop
 - All VTT core features listed above (maps, tokens, lighting, dice, character sheets, chat)
 - Human-to-human voice/video chat (integrated, not bolted on)
-- AI map generation tool for DM session prep
+- AI map and token generation tools for DM session prep
 - Game system plugin architecture with 3.5e as first system
 - AI voice and character interfaces defined (not implemented)
 - The product stands alone as an excellent VTT with zero AI NPC involvement
