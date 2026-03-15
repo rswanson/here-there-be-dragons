@@ -1,0 +1,272 @@
+# Here There Be Dragons — Design Spec
+
+An open-source virtual tabletop that explores what D&D looks like when AI agents sit at the table alongside human players.
+
+## Core Question
+
+Can non-human participants make tabletop RPGs better without making them less human?
+
+## Experience Pillars
+
+### 1. The VTT is the product
+
+This is a virtual tabletop first. The AI features are a differentiator, but they are secondary. If the VTT isn't exceptional, nobody sticks around long enough to try the AI. Every design decision must pass the test: *does this make the tabletop better?*
+
+### 2. The DM's fun matters
+
+AI should make DMing more enjoyable, not turn the DM into a switchboard operator. What the AI handles vs. what the DM keeps is a tunable dial, not a fixed split. Most DMs will never touch the AI features — and that's fine. The ones who do should find it liberating, not overwhelming.
+
+### 3. Immersion through voice
+
+AI characters will eventually speak with distinct voices in real time. Players talk to NPCs naturally, and the NPCs talk back. Latency is the enemy — if an NPC pauses for 3 seconds before responding, the spell breaks. Voice is a separate module that plugs into well-defined interfaces; it does not exist at launch.
+
+### 4. Open and community-driven
+
+The design is public, the tradeoffs are documented honestly, and the architecture invites contribution. AI-in-TTRPG is uncharted territory; we need many perspectives to get it right.
+
+---
+
+## Experience Scenarios
+
+These scenarios illustrate what playing with AI characters feels like in practice.
+
+### The Tavern — Routine NPC Interaction
+
+The party arrives in Millhaven after a long road. The DM narrates: *"You push open the door to the Rusty Anchor. It's warm inside, smells like stew and pipe smoke."* The DM has set up Bren, the barkeep — a gruff but kind AI character with a profile: knows local rumors, will sell rooms for 5 silver, doesn't know anything about the missing caravan (that's for a different NPC).
+
+A player says, "Hey barkeep, what's good tonight?" Bren responds in character: "Stew's always good. Ale's better. You lot look like you've been on the road a while." The conversation flows naturally. The DM listens and watches the party explore. When a player asks Bren about the old ruins to the north, Bren stays in bounds: "I don't go near those hills. Nobody does. You want to know about that, talk to Old Maren at the temple."
+
+The DM didn't have to voice Bren, manage the dialogue, or track what Bren should and shouldn't know. They set the character up and let the AI perform. The DM is free to think about what happens next.
+
+### The Split Party — Parallel Conversations
+
+The party splits up in a city. Two players go to the docks to investigate a lead. Two others stay at the inn to interrogate a captured spy. The DM is running the interrogation — that's the dramatic scene they care about.
+
+Meanwhile, at the docks, the two players are talking to a harbormaster the DM set up as an AI character: knows ship manifests, is bureaucratic and unhelpful, will cave if bribed or intimidated. The AI harbormaster runs the conversation in real time. The players at the docks are having a full roleplay experience without the DM needing to context-switch.
+
+**Protecting the DM's attention:** The DM's cognitive load is a scarce resource. The system protects it:
+
+- **Interrupt-on-threshold** — the AI runs the dock conversation silently and only pings the DM when something hits a boundary: a player asks about something the NPC doesn't have info for, a player tries something unexpected, or the conversation touches a DM-flagged topic. Otherwise, no notification.
+- **Post-conversation summary** — when the dock conversation wraps up, the DM gets a concise recap: "Players learned ships X and Y arrived last week. Harbormaster was bribed 10gp for access to the manifest. No plot boundaries were hit."
+- **Pause & queue** — if the AI hits something it can't handle, it stalls in-character ("Hold on, let me check the records...") and queues the question for the DM to answer when they have a moment, rather than interrupting mid-scene.
+
+### The DM Takes the Wheel
+
+The party has tracked down Lady Ashworth, a key villain. The DM had her set up as an AI character for earlier social encounters — she was charming and evasive at the ball last session. But now, in the confrontation, the stakes are too high and the DM wants full control.
+
+The DM hits "take the wheel" on Lady Ashworth. From this point, the DM runs her directly. The AI character indicator on the players' side changes to show this is now DM-controlled. The DM gets access to Ashworth's full AI conversation history from previous interactions, so they know exactly what she's already told the party. No continuity breaks.
+
+---
+
+## The DM Experience Dial
+
+Every DM enjoys different parts of the game. There is no single correct split between human and AI. The system provides a per-character delegation level, defaulting to fully human-controlled.
+
+| Level | Label | What the AI does | DM involvement |
+|-------|-------|-------------------|----------------|
+| 0 | **Off** (default) | Nothing. DM runs this character entirely. | Full |
+| 1 | **Copilot** | Suggests responses the DM can use or edit. Tracks continuity across sessions. | DM speaks/types, AI assists |
+| 2 | **Autopilot with guardrails** | AI runs the character within DM-defined boundaries. Flags boundary hits. Manages cognitive load (interrupt thresholds, summaries, pause & queue). | DM monitors, intervenes when needed |
+
+**Adoption expectations:** Most DMs will stay at Level 0. Some will experiment with Level 1. Few will use Level 2. The product must be excellent at Level 0 — AI features are invisible unless actively sought.
+
+The DM can change the level at any time mid-session. "Take the wheel" moves any character from Level 1/2 to Level 0 instantly. The DM also has full player capabilities (voice, VTT interaction, character control) in addition to DM-specific tools — they are a player and a DM simultaneously.
+
+---
+
+## VTT Core Features
+
+The VTT must match or exceed the Roll20 feature set. This is the product. Everything below is required before AI features matter.
+
+### Maps & Rendering
+- Upload and display battle maps
+- Multiple layers (map, token, DM-only)
+- Drawing tools for on-the-fly map creation
+- Dynamic lighting and line-of-sight
+- Fog of war (explored/unexplored)
+- Light sources on tokens
+- Smooth performance and fast load times
+
+### Tokens & Characters
+- Drag-and-drop token placement
+- Token bars (HP, mana, etc.)
+- Status markers and conditions
+- Token vision and light emission
+- Character sheets — editable, game-system-aware
+- Character portraits and art
+
+### Game Mechanics
+- Full dice engine with visible rolls, whisper rolls
+- Initiative tracker — sortable, editable, round tracking
+- Measurement tools (distance, area of effect)
+
+### Dice Macro Engine / DSL
+
+A domain-specific language for writing dice macros that are both human-readable and produce rich visual output. This is a core VTT feature, not an afterthought.
+
+**Design principles:**
+
+- **Readable syntax** — a new player should be able to look at a macro and understand what it does. No cryptic bracket notation.
+- **Character-sheet-aware** — macros reference character sheet fields via `@field_name`. The fields available depend on the game system plugin, but the DSL syntax is universal.
+- **Rich visual output** — macros render as formatted cards in chat: dice shown visually with individual die faces, labels, color coding, conditional sections (crit/fail), embedded images, and character portraits.
+- **Composable** — macros can call other macros. A "Full Attack" macro in 3.5e can chain multiple attack rolls at different BAB values.
+- **Shareable** — DMs can create macros and share them with the table. Community macro libraries per game system.
+
+The DSL should feel closer to writing markdown than writing code. It requires its own dedicated design phase to get the syntax, visual rendering, and character sheet binding right.
+
+**Example (illustrative, not final syntax):**
+
+```
+/attack "Longsword" {
+  roll 1d20 + @str_mod + @bab
+  damage 1d8 + @str_mod slashing
+  on crit: damage + 1d8 slashing
+}
+```
+
+Output: a formatted card showing the weapon name, roll result with dice visuals, damage calculation, and crit highlighting.
+
+```
+/check Persuasion {
+  roll 1d20 + @cha_mod + @persuasion_ranks
+  dc 15
+  on success: "The merchant lowers the price"
+  on fail: "The merchant scoffs"
+}
+```
+
+Output: a skill check card with pass/fail state, modifier breakdown, and flavor text.
+
+### Content & Communication
+- Handouts and journals (player-visible vs. DM-only)
+- Text chat with roll integration and whispers
+- Asset library for maps, tokens, and character art
+- Campaign management — persistent campaigns, session history
+
+### Audio/Video
+- Integrated voice and video chat as a first-class feature
+- Not a bolt-on — designed into the platform from the start
+- Interfaces defined in Phase 1 for the voice module to plug into later
+
+### Game System Architecture
+- **Platform-agnostic** — the core VTT does not assume any specific game system
+- **Plugin-based** — game systems are modules that define character sheet fields, rules, and macros
+- **3.5e ships first** — the first supported system, with deeper mechanical support
+- **Community-extensible** — architecture supports community-contributed plugins for 5e, Pathfinder, and other systems
+
+### Where We Aim to Improve on Roll20
+- Modern UI/UX (Roll20's interface is dated)
+- Integrated voice/video, not "use Discord on the side"
+- A dice macro DSL that's readable and produces beautiful output
+- Performance — smooth rendering, fast loads
+- Open source — community can extend, theme, contribute
+
+---
+
+## AI Character System (Opt-in, Phase 2)
+
+All AI features are opt-in. The default experience has no AI involvement.
+
+### NPC Character Profiles
+
+When a DM enables AI for a character (Level 1 or 2), they configure:
+
+- **Personality** — tone, mannerisms, speech patterns
+- **Knowledge** — what this character knows and doesn't know
+- **Goals** — what the character wants from interactions
+- **Boundaries** — topics the character will not engage with or information they will never reveal
+- **Escalation triggers** — conditions that cause the AI to flag the DM rather than respond autonomously
+
+### Transparency
+
+AI-controlled characters are visibly marked in the UI. Players always know when they're interacting with an AI character vs. a DM-controlled one. This is by design — the voices and behavior will be distinct, so pretending otherwise would be disingenuous.
+
+### Cognitive Load Management
+
+When AI characters are running parallel to the DM's active scene:
+
+- The DM's attention is treated as a scarce resource
+- AI conversations run silently unless a boundary or escalation trigger is hit
+- Post-conversation summaries are generated automatically
+- The AI can stall in-character to queue questions for the DM
+- The system never forces the DM to context-switch
+
+---
+
+## Voice Architecture (Interfaces in Phase 1, Implementation in Phase 3)
+
+Voice is a separate module. Phase 1 defines the interfaces it will plug into. Phase 3 builds it. Until then, it's a black box.
+
+### Interface Requirements (Phase 1)
+
+The VTT must define clean interfaces for:
+
+- **Audio input/output routing** — where voice data flows between participants
+- **Character-to-voice mapping** — associating a character with a voice identity
+- **Speech event hooks** — knowing when a player starts/stops speaking, and to whom
+- **AI response injection** — a channel for AI-generated audio to enter the voice stream
+
+### Implementation Vision (Phase 3)
+
+**Pipeline:**
+```
+Player speaks → STT → LLM generates response → TTS → Player hears NPC
+```
+
+**Latency target:** Under 1.5 seconds from end of player speech to start of NPC audio response.
+
+**Latency strategy:** Streaming pipeline — STT streams partial transcripts to the LLM, LLM begins generating immediately, TTS synthesizes and plays from the first sentence while the rest is still being generated.
+
+**Voice identity:** Each AI character gets a distinct voice profile (target). Fallback: single TTS voice with character identity conveyed through text labels.
+
+---
+
+## Project Phases
+
+### Phase 1: Exceptional Virtual Tabletop
+- All VTT core features listed above
+- Game system plugin architecture with 3.5e as first system
+- Voice and AI interfaces defined (not implemented)
+- The product stands alone as an excellent VTT with zero AI
+
+### Phase 2: Text-Based AI Characters
+- NPC character profiles and boundaries
+- DM delegation dial (Levels 0–2)
+- Copilot mode (Level 1) and Autopilot with guardrails (Level 2)
+- Take-the-wheel controls
+- Cognitive load management for parallel conversations
+- All AI interaction via text chat
+- Entirely opt-in; default remains Level 0
+
+### Phase 3: Voice Module
+- Integrated voice/video chat for all participants
+- STT → LLM → TTS pipeline for AI characters
+- Per-character voice profiles
+- Streaming architecture for conversational latency
+- Crosstalk and turn-taking handling
+- Fallback to single voice when latency is untenable
+
+### Ongoing: Game System Plugins
+- 3.5e ships with Phase 1
+- Community contributes additional systems (5e, Pathfinder, etc.)
+- Each system defines its character sheet fields, rules, and macro libraries
+
+---
+
+## Open Questions
+
+These are deliberately unresolved. They need research, prototyping, or playtesting.
+
+1. **Session memory vs. context limits** — AI characters need to remember what happened earlier in the session and across sessions. LLM context windows are finite. How do we manage long-running campaign memory? Summarization? Retrieval-augmented generation?
+
+2. **Character boundary enforcement** — when an AI NPC is set to "doesn't know about the missing caravan," how hard is that boundary? Players will try to trick, persuade, or intimidate information out of NPCs. The AI needs to stay in bounds without breaking character. This is a prompt engineering challenge with gameplay consequences.
+
+3. **Cost at scale** — LLM inference + TTS for every NPC conversation across a 4-hour session adds up. How do we handle this for an open-source project? BYO API key? Hosted tier? Local model support?
+
+4. **Crosstalk and turn-taking** — in voice, how does the system know when a player is talking to an NPC vs. talking to another player? How does it handle interruptions?
+
+5. **Content safety** — AI characters exist in a fantasy world where players may push boundaries. How do we handle this responsibly without being heavy-handed? Per-table configuration seems likely.
+
+6. **DM cognitive load measurement** — we want to protect the DM's attention, but how do we know if we're succeeding? Playtesting metrics? In-session feedback mechanisms?
+
+7. **Dice macro DSL design** — the macro language needs its own design phase. Syntax, rendering engine, character sheet binding, composability, and community sharing all need dedicated exploration.
