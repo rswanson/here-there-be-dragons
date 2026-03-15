@@ -68,6 +68,8 @@ Every DM enjoys different parts of the game. There is no single correct split be
 | 1 | **Copilot** | Suggests responses the DM can use or edit. Tracks continuity across sessions. | DM speaks/types, AI assists |
 | 2 | **Autopilot with guardrails** | AI runs the character within DM-defined boundaries. Flags boundary hits. Manages cognitive load (interrupt thresholds, summaries, pause & queue). | DM monitors, intervenes when needed |
 
+Levels are set **per-character** and can be changed at any time mid-session. "Take the wheel" is simply moving a character from Level 1 or 2 to Level 0.
+
 **Adoption expectations:** Most DMs will stay at Level 0. Some will experiment with Level 1. Few will use Level 2. The product must be excellent at Level 0 — AI features are invisible unless actively sought.
 
 The DM can change the level at any time mid-session. "Take the wheel" moves any character from Level 1/2 to Level 0 instantly. The DM also has full player capabilities (voice, VTT interaction, character control) in addition to DM-specific tools — they are a player and a DM simultaneously.
@@ -116,7 +118,7 @@ A domain-specific language for writing dice macros that are both human-readable 
 - **Composable** — macros can call other macros. A "Full Attack" macro in 3.5e can chain multiple attack rolls at different BAB values.
 - **Shareable** — DMs can create macros and share them with the table. Community macro libraries per game system.
 
-The DSL should feel closer to writing markdown than writing code. It requires its own dedicated design phase to get the syntax, visual rendering, and character sheet binding right (see [Open Questions #7](#open-questions)).
+The DSL should feel closer to writing markdown than writing code. It requires its own dedicated design phase to get the syntax, visual rendering, and character sheet binding right (see Open Questions).
 
 **Example (illustrative, not final syntax):**
 
@@ -159,11 +161,18 @@ Phase 3 builds the AI voice pipeline (STT → LLM → TTS) on top of the same au
 - **3.5e ships first** — the first supported system, with deeper mechanical support
 - **Community-extensible** — architecture supports community-contributed plugins for 5e, Pathfinder, and other systems
 
+### Accessibility
+- Keyboard navigation for all core features
+- Screen reader support for chat, character sheets, and dice results
+- Colorblind-friendly defaults for tokens, status markers, and dynamic lighting
+- Accessibility is a baseline, not a stretch goal
+
 ### Where We Aim to Improve on Roll20
 - Modern UI/UX (Roll20's interface is dated)
 - Integrated voice/video, not "use Discord on the side"
 - A dice macro DSL that's readable and produces beautiful output
 - Performance — smooth rendering, fast loads
+- Accessible by default
 - Open source — community can extend, theme, contribute
 
 ---
@@ -263,7 +272,7 @@ Player speaks → STT → LLM generates response → TTS → Player hears NPC
 - Fallback to single voice when latency is untenable
 
 ### Ongoing: Game System Plugins
-- 3.5e ships with Phase 1
+- The plugin architecture and 3.5e system ship with Phase 1; community contributions begin after the plugin API stabilizes
 - Community contributes additional systems (5e, Pathfinder, etc.)
 - Each system defines its character sheet fields, rules, and macro libraries
 
