@@ -21,7 +21,7 @@ tracing-subscriber.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 
-rust-argon2 = "2"
+rust-argon2 = "3"
 jsonwebtoken = "9"
 rand = "0.8"
 sha2 = "0.10"
