@@ -1,0 +1,4 @@
+[package]
+name = "asset-store"
+version.workspace = true
+edition.workspace = true
