@@ -143,6 +143,27 @@ Output: a formatted card showing the weapon name, roll result with dice visuals,
 
 Output: a skill check card with pass/fail state, modifier breakdown, and flavor text.
 
+### AI Map Generation (DM Tool)
+
+A DM prep tool that generates battle maps from natural language descriptions, constrained to the VTT's grid system. This is a creative tool for the DM, not a session-time feature — it lives in the map editor, not the live session.
+
+**How it works:**
+
+1. The DM describes the map in plain language: *"A 30x20 tavern interior. Bar along the north wall, four round tables in the center, a fireplace on the east wall, a staircase in the southwest corner leading up, and a back door behind the bar."*
+2. The DM sets grid dimensions (e.g., 30x20 squares) and style preferences (parchment, realistic, dark fantasy, etc.)
+3. The system generates a map that fits the grid exactly — no resizing, no alignment issues
+4. The DM iterates: *"Move the staircase to the southeast corner. Add a storage room behind the bar accessible through the back door."*
+5. Once satisfied, the map is saved directly to the campaign asset library, grid-aligned and ready for play
+
+**Design principles:**
+
+- **Grid-native** — generated maps respect the grid dimensions the DM specifies. A 30x20 map is exactly 30x20 squares. Walls align to grid lines. This is non-negotiable — a beautiful map that doesn't align to the grid is useless for tactical play.
+- **Iterative** — the DM should be able to refine through conversation, not start over each time. "Add a secret passage between these two rooms" should modify the existing map.
+- **Style-consistent** — a campaign's maps should be able to share a visual style. If the DM picks "dark fantasy parchment," all generated maps should feel cohesive.
+- **DM prep, not live generation** — this is for session prep or between-session work. No latency pressure. Quality over speed.
+
+Like the voice module, this depends on external AI services (image generation models). It should support BYO API key and ideally multiple providers. The interface should be defined early so it can be built as a module.
+
 ### Content & Communication
 - Handouts and journals (player-visible vs. DM-only)
 - Text chat with roll integration and whispers
@@ -249,11 +270,12 @@ Player speaks → STT → LLM generates response → TTS → Player hears NPC
 ## Project Phases
 
 ### Phase 1: Exceptional Virtual Tabletop
-- All VTT core features listed above
+- All VTT core features listed above (maps, tokens, lighting, dice, character sheets, chat)
 - Human-to-human voice/video chat (integrated, not bolted on)
+- AI map generation tool for DM session prep
 - Game system plugin architecture with 3.5e as first system
 - AI voice and character interfaces defined (not implemented)
-- The product stands alone as an excellent VTT with zero AI
+- The product stands alone as an excellent VTT with zero AI NPC involvement
 
 ### Phase 2: Text-Based AI Characters
 - NPC character profiles and boundaries
