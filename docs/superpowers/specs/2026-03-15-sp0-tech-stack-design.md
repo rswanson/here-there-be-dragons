@@ -329,27 +329,56 @@ The PixiJS canvas is inherently inaccessible to screen readers. For canvas inter
 
 ### Testing
 
-**Backend (Rust):**
+Testing at three levels: unit, integration, and end-to-end. All levels run in CI on every PR.
+
+**Unit tests (Rust — `cargo test`):**
 - Auth flows: registration, login, JWT issuance/refresh, password hashing
 - Asset upload/download: file validation, storage/retrieval, size limits
 - Campaign CRUD: creation, invite code generation, member join/leave, permissions
 - Database migrations: verify all migrations apply cleanly to a fresh database
 - WebSocket: connection establishment, message serialization/deserialization
 
-**Frontend (React):**
+**Unit tests (Frontend — Vitest):**
 - Component rendering: key UI components render without errors
 - API client: REST and WebSocket client handle success/error cases
+- Zustand stores: state transitions, subscription behavior
 - Type generation: verify generated TypeScript types compile
 
-**Integration:**
-- Full auth flow: register → login → create campaign → invite → join
-- Asset upload: upload file via API → verify it's retrievable → verify thumbnail generated
+**Integration tests (Rust — against real PostgreSQL):**
+- Full auth flow: register → login → refresh token → access protected route → token expiry
+- Campaign lifecycle: create → generate invite → join via invite → verify membership and permissions
+- Asset upload: upload file via API → verify it's stored and retrievable → verify thumbnail generated → delete and verify removal
+- WebSocket session: connect → send message → receive broadcast → disconnect → reconnect
+
+**End-to-end tests (Playwright — full stack in browser):**
+
+Playwright tests exercise the complete stack (browser → Axum server → PostgreSQL) through real user interactions. SP-0 establishes the Playwright infrastructure and delivers e2e coverage for all SP-0 functionality:
+
+- **Registration & login:** fill out registration form → submit → verify redirect to campaigns page → log out → log back in → verify session persists across page reload
+- **Campaign management:** create a campaign → verify it appears in the list → copy invite link → open a second browser context → join via invite link → verify both users see the campaign
+- **Asset library:** open asset browser → upload a file via drag-and-drop or file picker → verify thumbnail appears in the grid → verify the file is downloadable → delete the asset → verify it's removed
+- **Canvas shell:** navigate to a campaign → verify the PixiJS canvas initializes without errors (SP-0 scope: empty canvas, no grid or tokens yet)
+- **Multi-user real-time:** DM and player browser contexts connected to the same campaign — verify that both see the same campaign state
+- **Permissions:** verify player cannot access DM-only actions (asset upload, campaign settings) through the UI; verify API rejects unauthorized requests
+
+**Playwright infrastructure (established in SP-0, used by all subsequent sub-projects):**
+- `docker compose -f docker/docker-compose.test.yml` spins up the full stack (server + database) for test runs
+- Each test suite gets a fresh database (migrations applied, no stale data between suites)
+- Playwright's multi-browser-context support enables multi-user scenarios (DM + player in the same test)
+- Visual regression snapshots for canvas rendering (baseline established in SP-0, extended by SP-1+)
+- Test helpers for common flows: `registerAndLogin(page, user)`, `createCampaign(page, name)`, `joinCampaign(page, inviteCode)`
+
+Every subsequent sub-project adds its own Playwright tests as part of its acceptance criteria. A feature without e2e coverage is not complete.
 
 ### CI Pipeline (GitHub Actions)
 
-- `cargo test` + `cargo clippy` — Rust tests and lints
-- `npm test` + `eslint` — frontend tests and lints
+- `cargo fmt --check` — Rust formatting
+- `cargo clippy --workspace -- -D warnings` — Rust lints
+- `cargo test --workspace` — Rust unit + integration tests
 - `cargo sqlx prepare --check` — verify compile-time SQL queries match migrations
+- `npm run lint` + `npm run build` — frontend lints and type checking
+- `npm run test` — Vitest unit tests
+- `npm run test:e2e` — Playwright end-to-end tests (against Docker Compose test stack)
 - Docker image build on main branch
 
 ---

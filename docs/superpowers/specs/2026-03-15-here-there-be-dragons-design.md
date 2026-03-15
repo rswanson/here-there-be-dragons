@@ -116,6 +116,7 @@ A domain-specific language for writing dice macros that are both human-readable 
 - **Character-sheet-aware** — macros reference character sheet fields via `@field_name`. The fields available depend on the game system plugin, but the DSL syntax is universal.
 - **Rich visual output** — macros render as formatted cards in chat: dice shown visually with individual die faces, labels, color coding, conditional sections (crit/fail), embedded images, and character portraits.
 - **Composable** — macros can call other macros. A "Full Attack" macro in 3.5e can chain multiple attack rolls at different BAB values.
+- **Conditional logic** — macros support if/then branching based on roll results, enabling mechanics like confirm-on-crit, reroll-on-nat-1, and cascading checks where one roll's outcome determines what happens next. Conditions can test raw die values, totals, success/failure, or comparisons against thresholds.
 - **Shareable** — DMs can create macros and share them with the table. Community macro libraries per game system.
 
 The DSL should feel closer to writing markdown than writing code. It requires its own dedicated design phase to get the syntax, visual rendering, and character sheet binding right (see Open Questions).
@@ -142,6 +143,52 @@ Output: a formatted card showing the weapon name, roll result with dice visuals,
 ```
 
 Output: a skill check card with pass/fail state, modifier breakdown, and flavor text.
+
+```
+/attack "Longsword (3.5e Confirm Crit)" {
+  roll attack = 1d20 + @str_mod + @bab
+  if attack is crit {
+    roll confirm = 1d20 + @str_mod + @bab
+    if confirm >= @target_ac {
+      damage 2d8 + @str_mod * 2 slashing
+      "Critical hit confirmed!"
+    } else {
+      damage 1d8 + @str_mod slashing
+      "Crit not confirmed — normal hit"
+    }
+  } else if attack is fumble {
+    roll recovery = 1d20 + @dex_mod
+    if recovery < 10 {
+      "You lose your grip — drop weapon"
+    } else {
+      "You stumble but recover"
+    }
+  } else {
+    damage 1d8 + @str_mod slashing
+  }
+}
+```
+
+Output: a branching attack card that shows the full chain — initial roll, confirmation roll (if triggered), and final outcome with damage or fumble consequence. Each branch is visually distinct so the result reads as a narrative.
+
+```
+/check "Cascading Lore" {
+  roll knowledge = 1d20 + @int_mod + @knowledge_arcana
+  if knowledge >= 25 {
+    "You recognize the artifact and recall its full history"
+    roll insight = 1d20 + @wis_mod
+    if insight >= 15 {
+      "...and you sense it's been recently activated"
+    }
+  } else if knowledge >= 15 {
+    "You recognize the artifact but not its origin"
+  } else {
+    "The artifact is unfamiliar to you"
+  }
+}
+```
+
+Output: a cascading skill check where exceeding a high threshold triggers a follow-up roll, modeling the "the more you know, the more you notice" pattern common in tabletop play.
 
 ### AI Map Generation (DM Tool)
 
@@ -207,6 +254,36 @@ Phase 3 builds the AI voice pipeline (STT → LLM → TTS) on top of the same au
 - Screen reader support for chat, character sheets, and dice results
 - Colorblind-friendly defaults for tokens, status markers, and dynamic lighting
 - Accessibility is a baseline, not a stretch goal
+
+### Testing Strategy
+
+Testing is a cross-cutting concern — every subsystem must be tested at multiple levels. This is not optional or deferred; tests ship with the feature.
+
+**Unit tests** — isolated logic: dice evaluation, permission checks, state transformations, DSL parsing, plugin schema validation. Fast, no external dependencies.
+
+**Integration tests** — backend flows that cross crate boundaries or hit the database: full auth flow (register → login → refresh → access protected route), campaign lifecycle (create → invite → join → permissions), asset upload through the storage backend, WebSocket message round-trips, game state persistence and reload.
+
+**End-to-end tests (Playwright)** — browser-based tests that exercise the full stack (client + server + database) as a user would. Every major piece of functionality must have Playwright coverage:
+
+- **Auth:** register, login, logout, session expiry and refresh — tested from the browser through actual form interactions
+- **Campaigns:** create campaign, copy invite link, join as second user, verify both users see the campaign
+- **Asset library:** upload a file via the browser UI, verify it appears in the asset browser, delete it, verify removal
+- **Canvas:** PixiJS canvas initializes, loads a map image, basic pan/zoom interaction
+- **Chat & dice:** send a message, see it appear for other connected users, execute a dice macro, verify the roll card renders
+- **Character sheets:** create a character, edit fields, verify computed values update, verify persistence across page reload
+- **Initiative tracker:** add combatants, roll initiative, verify sort order, advance rounds
+- **Dynamic lighting:** place walls, move a token, verify fog of war updates for the player's view
+- **Multi-user real-time:** two browser contexts connected to the same session, verify that actions by one user (token move, chat message, fog reveal) are visible to the other in real time
+- **Permissions:** verify that player accounts cannot access DM-only actions (fog control, asset upload, map editing) through the UI
+
+**Playwright infrastructure:**
+- Tests run against a real server + database (Docker Compose test environment), not mocks
+- Each test suite gets a fresh database state (migrations applied, no stale data)
+- Tests use Playwright's multi-browser-context support for multi-user scenarios (DM + player in the same test)
+- CI runs Playwright tests on every PR — they are not a secondary check
+- Visual regression tests for canvas rendering (PixiJS snapshots) to catch rendering regressions in grid, tokens, lighting, and fog of war
+
+Each sub-project's acceptance criteria must include the Playwright tests that prove the feature works end-to-end. A feature without e2e test coverage is not complete.
 
 ### Where We Aim to Improve on Roll20
 - Modern UI/UX (Roll20's interface is dated)

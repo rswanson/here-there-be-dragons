@@ -32,11 +32,22 @@ These apply to every sub-project. They are not separate tasks — they are const
 - Colorblind-friendly defaults (no color-only indicators, configurable palettes)
 - Accessibility requirements are part of SP-0's foundation (component library, design tokens) and enforced in every subsequent sub-project's acceptance criteria
 
-**Testing:** Each sub-project includes its own test plan:
-- Unit tests for business logic and data transformations
-- Integration tests for cross-component interactions
-- For the rendering engine (SP-1, SP-5): visual regression tests
-- For real-time features (SP-2, SP-4, SP-6): multi-client integration tests
+**Testing:** Each sub-project includes its own test plan covering all three levels. A feature without coverage at each applicable level is not complete:
+- **Unit tests** for business logic, data transformations, state management, and isolated component rendering
+- **Integration tests** (backend) for cross-crate flows hitting a real database — auth, campaign lifecycle, asset operations, WebSocket sessions
+- **End-to-end tests (Playwright)** for every major piece of user-facing functionality, exercising the full stack (browser → server → database) through real UI interactions. Specific coverage requirements per sub-project:
+  - SP-0: auth flows, campaign create/join, asset upload/browse/delete, canvas initialization, multi-user session
+  - SP-1: map upload and display, token placement and drag, grid snap, pan/zoom, drawing tools, measurement tools
+  - SP-2: multi-client state sync (token moves, map changes visible across browsers), reconnect after disconnect, session persistence
+  - SP-3: character creation, sheet field editing, computed value updates, sheet persistence across reload
+  - SP-4: send/receive chat messages across users, whispers, character-attributed messages, initiative tracker round flow, handout visibility controls
+  - SP-5: wall placement, fog of war reveal/hide, per-token vision (player sees only what their token sees), lighting updates on token move — visual regression snapshots for lighting/fog rendering
+  - SP-6: voice/video connection establishment, mute/unmute, push-to-talk, multi-participant audio
+  - SP-7: dice macro execution from chat, roll card rendering, conditional branching (if/then), character sheet field binding, macro composition
+  - SP-8/SP-9: AI generation request flow, iterative refinement, save-to-asset-library
+- **Visual regression tests** (Playwright screenshots) for the rendering engine (SP-1, SP-5): canvas snapshots that catch regressions in grid, token, lighting, and fog of war rendering
+- **Multi-client integration tests** for real-time features (SP-2, SP-4, SP-6): Playwright multi-browser-context tests verifying that actions by one user are visible to others in real time
+- Playwright infrastructure (Docker Compose test stack, test helpers, fresh DB per suite) is established in SP-0 and used by all subsequent sub-projects
 
 **Phase 2/3 Interface Stubs:** The design spec says Phase 1 "defines interfaces" for AI characters (Phase 2) and AI voice (Phase 3). Voice interfaces are defined in SP-6. AI character interfaces (NPC profiles, delegation dial, take-the-wheel, cognitive load management) will be defined as part of Phase 2's first sub-project — they require enough understanding of the Phase 2 design that stubbing them prematurely in Phase 1 would produce the wrong abstractions. Phase 1 focuses on building a great VTT; Phase 2 defines its own interfaces when it begins.
 
