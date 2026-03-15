@@ -28,22 +28,29 @@ impl StorageBackend for LocalStorage {
 
     async fn retrieve(&self, path: &str) -> Result<Vec<u8>, StorageError> {
         let full_path = self.full_path(path);
-        if !full_path.exists() {
-            return Err(StorageError::NotFound(path.to_string()));
-        }
-        Ok(tokio::fs::read(&full_path).await?)
+        tokio::fs::read(&full_path).await.map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                StorageError::NotFound(path.to_string())
+            } else {
+                StorageError::Io(e)
+            }
+        })
     }
 
     async fn delete(&self, path: &str) -> Result<(), StorageError> {
-        let full_path = self.full_path(path);
-        if full_path.exists() {
-            tokio::fs::remove_file(&full_path).await?;
+        match tokio::fs::remove_file(self.full_path(path)).await {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(StorageError::Io(e)),
         }
-        Ok(())
     }
 
     async fn exists(&self, path: &str) -> Result<bool, StorageError> {
-        Ok(self.full_path(path).exists())
+        match tokio::fs::metadata(self.full_path(path)).await {
+            Ok(_) => Ok(true),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(StorageError::Io(e)),
+        }
     }
 }
 

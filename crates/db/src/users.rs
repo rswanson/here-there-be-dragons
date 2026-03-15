@@ -9,6 +9,17 @@ pub struct UserRow {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
+impl From<UserRow> for htbd_core::models::User {
+    fn from(row: UserRow) -> Self {
+        Self {
+            id: row.id,
+            email: row.email,
+            display_name: row.display_name,
+            created_at: row.created_at,
+        }
+    }
+}
+
 pub async fn create_user(
     pool: &PgPool,
     email: &str,

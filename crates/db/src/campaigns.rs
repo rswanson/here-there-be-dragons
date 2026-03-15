@@ -10,6 +10,19 @@ pub struct CampaignRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+impl From<CampaignRow> for htbd_core::models::Campaign {
+    fn from(row: CampaignRow) -> Self {
+        Self {
+            id: row.id,
+            name: row.name,
+            owner_id: row.owner_id,
+            invite_code: row.invite_code,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
+}
+
 pub struct CampaignMemberRow {
     pub campaign_id: Uuid,
     pub user_id: Uuid,

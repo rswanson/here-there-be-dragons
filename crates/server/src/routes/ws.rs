@@ -9,6 +9,7 @@ use axum::{
 };
 use futures_util::StreamExt;
 
+use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
 use htbd_core::messages::{ClientMessage, ServerMessage};
 
@@ -16,11 +17,15 @@ pub fn routes() -> Router<AppState> {
     Router::new().route("/", get(ws_upgrade))
 }
 
-async fn ws_upgrade(ws: WebSocketUpgrade, State(_state): State<AppState>) -> impl IntoResponse {
-    ws.on_upgrade(handle_socket)
+async fn ws_upgrade(
+    ws: WebSocketUpgrade,
+    State(_state): State<AppState>,
+    auth: AuthUser,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(socket, auth.user_id))
 }
 
-async fn handle_socket(mut socket: WebSocket) {
+async fn handle_socket(mut socket: WebSocket, _user_id: uuid::Uuid) {
     while let Some(Ok(msg)) = socket.next().await {
         match msg {
             Message::Text(text) => {

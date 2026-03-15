@@ -13,6 +13,8 @@ use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
 use htbd_core::models::Asset;
 
+use super::guards::{require_dm, require_member};
+
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -36,12 +38,7 @@ async fn upload_asset(
     Path(campaign_id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<Asset>), AppError> {
-    let role = db::campaigns::get_member_role(&state.pool, campaign_id, auth.user_id)
-        .await?
-        .ok_or(AppError::Forbidden)?;
-    if role != "dm" {
-        return Err(AppError::Forbidden);
-    }
+    require_dm(&state, campaign_id, auth.user_id).await?;
 
     let field = multipart
         .next_field()
@@ -88,17 +85,7 @@ async fn upload_asset(
     )
     .await?;
 
-    let asset = Asset {
-        id: row.id,
-        campaign_id: row.campaign_id,
-        uploaded_by: row.uploaded_by,
-        filename: row.filename,
-        content_type: row.content_type,
-        size_bytes: row.size_bytes,
-        created_at: row.created_at,
-    };
-
-    Ok((StatusCode::CREATED, Json(asset)))
+    Ok((StatusCode::CREATED, Json(Asset::from(row))))
 }
 
 #[derive(Deserialize)]
@@ -114,9 +101,7 @@ async fn list_assets(
     Path(campaign_id): Path<Uuid>,
     Query(query): Query<ListAssetsQuery>,
 ) -> Result<Json<Vec<Asset>>, AppError> {
-    db::campaigns::get_member_role(&state.pool, campaign_id, auth.user_id)
-        .await?
-        .ok_or(AppError::Forbidden)?;
+    require_member(&state, campaign_id, auth.user_id).await?;
 
     let rows = db::assets::list_for_campaign(
         &state.pool,
@@ -127,20 +112,7 @@ async fn list_assets(
     )
     .await?;
 
-    let assets = rows
-        .into_iter()
-        .map(|r| Asset {
-            id: r.id,
-            campaign_id: r.campaign_id,
-            uploaded_by: r.uploaded_by,
-            filename: r.filename,
-            content_type: r.content_type,
-            size_bytes: r.size_bytes,
-            created_at: r.created_at,
-        })
-        .collect();
-
-    Ok(Json(assets))
+    Ok(Json(rows.into_iter().map(Asset::from).collect()))
 }
 
 async fn serve_asset(
@@ -152,9 +124,7 @@ async fn serve_asset(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    db::campaigns::get_member_role(&state.pool, row.campaign_id, auth.user_id)
-        .await?
-        .ok_or(AppError::Forbidden)?;
+    require_member(&state, row.campaign_id, auth.user_id).await?;
 
     let data = state.storage.retrieve(&row.storage_path).await?;
 
@@ -163,7 +133,7 @@ async fn serve_asset(
             (header::CONTENT_TYPE, row.content_type),
             (
                 header::CONTENT_DISPOSITION,
-                format!("inline; filename=\"{}\"", row.filename),
+                format!("attachment; filename=\"{}\"", row.filename),
             ),
         ],
         data,
@@ -179,12 +149,7 @@ async fn delete_asset(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let role = db::campaigns::get_member_role(&state.pool, row.campaign_id, auth.user_id)
-        .await?
-        .ok_or(AppError::Forbidden)?;
-    if role != "dm" {
-        return Err(AppError::Forbidden);
-    }
+    require_dm(&state, row.campaign_id, auth.user_id).await?;
 
     state.storage.delete(&row.storage_path).await?;
     db::assets::delete_asset(&state.pool, id).await?;

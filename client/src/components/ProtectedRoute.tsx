@@ -10,6 +10,7 @@ export function ProtectedRoute() {
 
   useEffect(() => {
     if (!user) {
+      setLoading(true)
       api.auth.me()
         .then((res) => setUser(res.user))
         .catch(() => setUser(null))

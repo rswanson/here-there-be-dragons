@@ -1,6 +1,7 @@
 pub mod assets;
 pub mod auth;
 pub mod campaigns;
+pub mod guards;
 pub mod ws;
 
 use crate::state::AppState;

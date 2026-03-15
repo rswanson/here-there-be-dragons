@@ -96,4 +96,15 @@ describe('WsClient', () => {
     client.disconnect()
     expect(ws.close).toHaveBeenCalled()
   })
+
+  it('disconnect prevents reconnect', () => {
+    client.connect('sess')
+    const ws = latestWs()
+    client.disconnect()
+    // Simulate the onclose that ws.close() triggers
+    ws.onclose?.()
+    vi.advanceTimersByTime(3000)
+    // Should still only have 1 instance — no reconnect
+    expect(mockInstances).toHaveLength(1)
+  })
 })

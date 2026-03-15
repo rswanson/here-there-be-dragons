@@ -13,6 +13,7 @@ export function CanvasView() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const appRef = useRef<PixiApp | null>(null)
   const spriteRef = useRef<Sprite | null>(null)
+  const pixiRef = useRef<typeof import('pixi.js') | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export function CanvasView() {
     const initPixi = async () => {
       try {
         const PIXI = await import('pixi.js')
+        pixiRef.current = PIXI
         if (!mounted) return
 
         const app = new PIXI.Application()
@@ -87,9 +89,12 @@ export function CanvasView() {
   useEffect(() => {
     if (!mapAssetUrl || !appRef.current || status !== 'ready') return
 
+    const PIXI = pixiRef.current
+    if (!PIXI) return
+
     let cancelled = false
 
-    import('pixi.js').then(async (PIXI) => {
+    const loadMap = async () => {
       const app = appRef.current
       if (!app || cancelled) return
 
@@ -104,7 +109,7 @@ export function CanvasView() {
         // has no file extension, and PIXI.Assets.load() relies on
         // extensions to pick the right parser. The browser's Image
         // element uses the Content-Type header from the server instead.
-        const img = new Image()
+        const img = new window.Image()
         img.crossOrigin = 'anonymous'
         img.src = mapAssetUrl
         await new Promise<void>((resolve, reject) => {
@@ -125,7 +130,9 @@ export function CanvasView() {
       } catch (err) {
         console.error('Failed to load map asset:', err)
       }
-    })
+    }
+
+    loadMap()
 
     return () => { cancelled = true }
   }, [mapAssetUrl, status])

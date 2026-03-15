@@ -26,12 +26,7 @@ async fn me(State(state): State<AppState>, auth: AuthUser) -> Result<Json<AuthRe
         .await?
         .ok_or(AppError::NotFound)?;
     Ok(Json(AuthResponse {
-        user: User {
-            id: row.id,
-            email: row.email,
-            display_name: row.display_name,
-            created_at: row.created_at,
-        },
+        user: User::from(row),
     }))
 }
 
@@ -69,12 +64,7 @@ async fn register(
     let row =
         db::users::create_user(&state.pool, &req.email, &password_hash, &req.display_name).await?;
 
-    let user = User {
-        id: row.id,
-        email: row.email,
-        display_name: row.display_name,
-        created_at: row.created_at,
-    };
+    let user = User::from(row);
 
     let jar = issue_tokens(&state, jar, user.id).await?;
     Ok((jar, Json(AuthResponse { user })))
@@ -96,12 +86,7 @@ async fn login(
         return Err(AppError::Unauthorized);
     }
 
-    let user = User {
-        id: row.id,
-        email: row.email,
-        display_name: row.display_name,
-        created_at: row.created_at,
-    };
+    let user = User::from(row);
 
     let jar = issue_tokens(&state, jar, user.id).await?;
     Ok((jar, Json(AuthResponse { user })))

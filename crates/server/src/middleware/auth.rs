@@ -57,8 +57,12 @@ pub fn create_access_token(jwt_secret: &str, user_id: Uuid) -> Result<String, Ap
 }
 
 pub fn generate_refresh_token() -> String {
+    random_hex_token(32)
+}
+
+pub fn random_hex_token(len: usize) -> String {
     use rand::Rng;
-    let bytes: [u8; 32] = rand::thread_rng().r#gen();
+    let bytes: Vec<u8> = (0..len).map(|_| rand::thread_rng().r#gen()).collect();
     hex::encode(bytes)
 }
 
