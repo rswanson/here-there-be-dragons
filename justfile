@@ -1,0 +1,134 @@
+# Default recipe: show help
+default:
+    @just --list
+
+# Install all dependencies
+setup:
+    cargo build --workspace
+    cd client && npm install
+
+# Start PostgreSQL (docker)
+[group("dev")]
+dev-db:
+    docker compose -f docker/docker-compose.dev.yml up db
+
+# Run Rust backend (port 3000)
+[group("dev")]
+dev-server:
+    cargo run -p server
+
+# Run Vite dev server (port 5173)
+[group("dev")]
+dev-client:
+    cd client && npm run dev
+
+# Build everything
+[group("build")]
+build: build-server build-client
+
+# Build all Rust crates
+[group("build")]
+build-server:
+    cargo build --workspace
+
+# Build React client
+[group("build")]
+build-client:
+    cd client && npm run build
+
+# Run all tests
+[group("test")]
+test: test-server test-client
+
+# Run Rust tests (also regenerates ts-rs bindings)
+[group("test")]
+test-server:
+    cargo test --workspace
+
+# Run Vitest unit tests
+[group("test")]
+test-client:
+    cd client && npm run test
+
+# Run Vitest in watch mode
+[group("test")]
+test-watch:
+    cd client && npm run test:watch
+
+# Run Playwright e2e tests
+[group("test")]
+test-e2e:
+    cd client && npm run test:e2e
+
+# Lint everything
+[group("lint")]
+lint: lint-server lint-client
+
+# Run clippy
+[group("lint")]
+lint-server:
+    SQLX_OFFLINE=true cargo clippy --workspace -- -D warnings
+
+# Run ESLint
+[group("lint")]
+lint-client:
+    cd client && npm run lint
+
+# Format all code
+[group("lint")]
+fmt:
+    cargo fmt --all
+    cd client && npx prettier --write 'src/**/*.{ts,tsx}'
+
+# Check formatting without changes
+[group("lint")]
+fmt-check:
+    cargo fmt --all -- --check
+
+# Run database migrations
+[group("db")]
+db-migrate:
+    sqlx migrate run
+
+# Regenerate .sqlx/ offline query data
+[group("db")]
+db-prepare:
+    cargo sqlx prepare --workspace
+
+# Build and run full stack via docker compose
+[group("docker")]
+docker:
+    docker compose -f docker/docker-compose.yml up --build
+
+# Start dev dependencies (DB) via docker compose
+[group("docker")]
+docker-dev:
+    docker compose -f docker/docker-compose.dev.yml up
+
+# Remove stale worktree metadata (directory already deleted)
+[group("worktree")]
+worktree-prune:
+    git worktree prune -v
+
+# Remove worktrees whose branch was merged or deleted on remote
+[group("worktree")]
+worktree-clean:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    git worktree prune
+    git fetch --prune
+    root=$(git rev-parse --show-toplevel)
+    git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //' | while read -r wt; do
+        [ "$wt" = "$root" ] && continue
+        branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
+        [ -z "$branch" ] && continue
+        if git branch -vv | grep -q "^\s*$branch\b.*: gone]"; then
+            echo "Removing worktree $wt (branch '$branch' is gone from remote)"
+            git worktree remove "$wt"
+        fi
+    done
+
+# Remove build artifacts
+clean:
+    cargo clean
+    rm -rf client/dist client/node_modules/.vite
