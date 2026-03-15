@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod map;
 pub mod messages;
 pub mod models;
 
@@ -32,5 +33,17 @@ mod tests {
         auth::AuthResponse::export_all_to(&out_dir).unwrap();
         auth::RegisterRequest::export_all_to(&out_dir).unwrap();
         auth::LoginRequest::export_all_to(&out_dir).unwrap();
+
+        // Map
+        map::Map::export_all_to(&out_dir).unwrap();
+        map::MapLayer::export_all_to(&out_dir).unwrap();
+        map::MapImage::export_all_to(&out_dir).unwrap();
+        map::CreateMapRequest::export_all_to(&out_dir).unwrap();
+        map::UpdateMapRequest::export_all_to(&out_dir).unwrap();
+        map::MapWithLayers::export_all_to(&out_dir).unwrap();
+        map::CreateLayerRequest::export_all_to(&out_dir).unwrap();
+        map::UpdateLayerRequest::export_all_to(&out_dir).unwrap();
+        map::PlaceMapImageRequest::export_all_to(&out_dir).unwrap();
+        map::UpdateMapImageRequest::export_all_to(&out_dir).unwrap();
     }
 }
