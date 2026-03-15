@@ -38,11 +38,18 @@ async fn main() {
         storage: Arc::from(storage),
     };
 
+    let client_dir =
+        std::env::var("CLIENT_DIR").unwrap_or_else(|_| "/srv/client".to_string());
     let app = Router::new()
         .nest("/api", routes::api_routes())
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive()) // Tighten in production
-        .with_state(state);
+        .with_state(state)
+        .fallback_service(
+            tower_http::services::ServeDir::new(&client_dir).fallback(
+                tower_http::services::ServeFile::new(format!("{}/index.html", client_dir)),
+            ),
+        );
 
     let listener = tokio::net::TcpListener::bind(&config.bind_address)
         .await
