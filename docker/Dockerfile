@@ -1,5 +1,5 @@
 # Stage 1: Build Rust server
-FROM rust:1.84 AS rust-builder
+FROM rust:latest AS rust-builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ crates/
