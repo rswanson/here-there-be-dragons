@@ -2092,7 +2092,7 @@ dependencies = [
  "hex",
  "htbd-core",
  "jsonwebtoken",
- "rand 0.8.5",
+ "rand 0.9.2",
  "reqwest",
  "rust-argon2",
  "serde",
