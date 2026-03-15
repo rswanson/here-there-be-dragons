@@ -76,7 +76,11 @@ The DM can change the level at any time mid-session. "Take the wheel" moves any 
 
 ## VTT Core Features
 
-The VTT must match or exceed the Roll20 feature set. This is the product. Everything below is required before AI features matter.
+The VTT must cover the core features that make a virtual tabletop session-ready, using Roll20 as a reference point. This is the product. Everything below is required before AI features matter.
+
+**Deployment model:** The VTT is a web-based client-server application. Players connect via browser. Campaigns, assets, and state are server-managed. Self-hosting is a first-class use case — an open-source project must not depend on a vendor's infrastructure to function. Details of hosting architecture (database, asset storage, real-time sync) are implementation concerns, but the commitment to self-hostability is a design constraint.
+
+**Assumptions:** The current design assumes a single DM per session. Co-DM setups (common in West Marches-style play) are a potential future extension but are not in scope for the initial design.
 
 ### Maps & Rendering
 - Upload and display battle maps
@@ -112,7 +116,7 @@ A domain-specific language for writing dice macros that are both human-readable 
 - **Composable** — macros can call other macros. A "Full Attack" macro in 3.5e can chain multiple attack rolls at different BAB values.
 - **Shareable** — DMs can create macros and share them with the table. Community macro libraries per game system.
 
-The DSL should feel closer to writing markdown than writing code. It requires its own dedicated design phase to get the syntax, visual rendering, and character sheet binding right.
+The DSL should feel closer to writing markdown than writing code. It requires its own dedicated design phase to get the syntax, visual rendering, and character sheet binding right (see [Open Questions #7](#open-questions)).
 
 **Example (illustrative, not final syntax):**
 
@@ -144,9 +148,10 @@ Output: a skill check card with pass/fail state, modifier breakdown, and flavor 
 - Campaign management — persistent campaigns, session history
 
 ### Audio/Video
-- Integrated voice and video chat as a first-class feature
-- Not a bolt-on — designed into the platform from the start
-- Interfaces defined in Phase 1 for the voice module to plug into later
+
+Human-to-human voice and video chat ships in Phase 1 as a core VTT feature. This is not optional — "use Discord on the side" is one of Roll20's biggest pain points and we will not repeat it.
+
+Phase 3 builds the AI voice pipeline (STT → LLM → TTS) on top of the same audio infrastructure. Phase 1 defines the interfaces that Phase 3 will plug into, so the AI voice module slots in without retrofitting. See the [Voice Architecture](#voice-architecture-interfaces-in-phase-1-implementation-in-phase-3) section for details.
 
 ### Game System Architecture
 - **Platform-agnostic** — the core VTT does not assume any specific game system
@@ -180,6 +185,17 @@ When a DM enables AI for a character (Level 1 or 2), they configure:
 ### Transparency
 
 AI-controlled characters are visibly marked in the UI. Players always know when they're interacting with an AI character vs. a DM-controlled one. This is by design — the voices and behavior will be distinct, so pretending otherwise would be disingenuous.
+
+**Conscious tradeoff:** When the DM "takes the wheel" on a character, the indicator changes — which gives players a meta-signal that something important is happening. We accept this as a transparency-over-immersion tradeoff. Hiding the indicator would mean players can't trust the UI, which is worse.
+
+### Player Experience with AI Characters
+
+The player's interaction with an AI NPC should feel like talking to any other character at the table — just one that happens to respond faster and more consistently than a DM juggling five NPCs.
+
+- **AI characters appear in chat and (eventually) voice like any NPC** — the only visual difference is a subtle indicator showing AI vs. DM control
+- **Players interact normally** — they speak or type to the NPC; no special syntax or mode-switching required
+- **Players cannot opt out of AI on a per-character basis** — if the DM has set a character to Level 2, that's a DM decision. However, a player who prefers DM-only interaction can tell their DM, and the DM can adjust. This is a social contract, not a system feature.
+- **When an AI stalls** (pause & queue), it stays in character — the player sees a natural conversational pause ("Let me think on that..."), not a loading spinner
 
 ### Cognitive Load Management
 
@@ -225,8 +241,9 @@ Player speaks → STT → LLM generates response → TTS → Player hears NPC
 
 ### Phase 1: Exceptional Virtual Tabletop
 - All VTT core features listed above
+- Human-to-human voice/video chat (integrated, not bolted on)
 - Game system plugin architecture with 3.5e as first system
-- Voice and AI interfaces defined (not implemented)
+- AI voice and character interfaces defined (not implemented)
 - The product stands alone as an excellent VTT with zero AI
 
 ### Phase 2: Text-Based AI Characters
@@ -238,9 +255,8 @@ Player speaks → STT → LLM generates response → TTS → Player hears NPC
 - All AI interaction via text chat
 - Entirely opt-in; default remains Level 0
 
-### Phase 3: Voice Module
-- Integrated voice/video chat for all participants
-- STT → LLM → TTS pipeline for AI characters
+### Phase 3: AI Voice Module
+- STT → LLM → TTS pipeline for AI characters (human voice/video already exists from Phase 1)
 - Per-character voice profiles
 - Streaming architecture for conversational latency
 - Crosstalk and turn-taking handling
@@ -270,3 +286,9 @@ These are deliberately unresolved. They need research, prototyping, or playtesti
 6. **DM cognitive load measurement** — we want to protect the DM's attention, but how do we know if we're succeeding? Playtesting metrics? In-session feedback mechanisms?
 
 7. **Dice macro DSL design** — the macro language needs its own design phase. Syntax, rendering engine, character sheet binding, composability, and community sharing all need dedicated exploration.
+
+8. **Local vs. cloud AI** — the spec assumes LLM inference, but doesn't commit to where it runs. Cloud-hosted (OpenAI, Anthropic, etc.) gives best quality but raises privacy concerns — players may not want in-character conversations sent to third-party servers. Local models (Ollama, llama.cpp) give privacy and zero marginal cost but sacrifice quality. This is an architecture decision, a privacy decision, and a cost decision rolled into one.
+
+9. **AI error recovery** — when an AI NPC says something that breaks continuity, contradicts established lore, or doesn't make sense, what's the DM's recovery path? "Take the wheel" handles going forward, but not correcting what was just said. The DM needs a way to retcon an AI response mid-conversation without breaking immersion ("Actually, what the barkeep meant was...").
+
+10. **Text-based AI response latency (Phase 2)** — the spec defines a 1.5-second latency target for voice (Phase 3), but says nothing about acceptable response time for text-based AI chat. Text has more tolerance than voice, but a 10-second wait for a chat response from a tavern keeper still breaks flow. Needs a stated target.
