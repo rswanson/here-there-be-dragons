@@ -73,17 +73,7 @@ async fn list_members(
     require_member(&state, id, auth.user_id).await?;
 
     let rows = db::campaigns::list_members(&state.pool, id).await?;
-    let members = rows
-        .into_iter()
-        .map(|r| CampaignMember {
-            campaign_id: r.campaign_id,
-            user_id: r.user_id,
-            role: r.role.parse().unwrap_or(CampaignRole::Player),
-            display_name: r.display_name,
-            joined_at: r.joined_at,
-        })
-        .collect();
-    Ok(Json(members))
+    Ok(Json(rows.into_iter().map(CampaignMember::from).collect()))
 }
 
 async fn join_campaign(
@@ -95,7 +85,13 @@ async fn join_campaign(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    db::campaigns::add_member(&state.pool, row.id, auth.user_id, "player").await?;
+    db::campaigns::add_member(
+        &state.pool,
+        row.id,
+        auth.user_id,
+        &CampaignRole::Player.to_string(),
+    )
+    .await?;
 
     Ok(Json(Campaign::from(row)))
 }

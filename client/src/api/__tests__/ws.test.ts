@@ -45,27 +45,27 @@ describe('WsClient', () => {
   })
 
   it('creates WebSocket with correct URL', () => {
-    client.connect('session-123')
+    client.connect()
     expect(WebSocket).toHaveBeenCalledWith(
-      expect.stringContaining('/api/ws?session=session-123'),
+      expect.stringContaining('/api/ws'),
     )
   })
 
   it('sends JSON-serialized messages when open', () => {
-    client.connect('sess')
+    client.connect()
     client.send({ type: 'Ping' })
     expect(latestWs().send).toHaveBeenCalledWith('{"type":"Ping"}')
   })
 
   it('does not send when socket is not open', () => {
-    client.connect('sess')
+    client.connect()
     latestWs().readyState = 3 // CLOSED
     client.send({ type: 'Ping' })
     expect(latestWs().send).not.toHaveBeenCalled()
   })
 
   it('dispatches parsed messages to subscribers', () => {
-    client.connect('sess')
+    client.connect()
     const handler = vi.fn()
     client.subscribe(handler)
 
@@ -74,7 +74,7 @@ describe('WsClient', () => {
   })
 
   it('unsubscribe removes handler', () => {
-    client.connect('sess')
+    client.connect()
     const handler = vi.fn()
     const unsub = client.subscribe(handler)
     unsub()
@@ -84,21 +84,21 @@ describe('WsClient', () => {
   })
 
   it('reconnects after close', () => {
-    client.connect('sess')
+    client.connect()
     latestWs().onclose?.()
     vi.advanceTimersByTime(3000)
     expect(mockInstances).toHaveLength(2)
   })
 
   it('disconnect closes the socket', () => {
-    client.connect('sess')
+    client.connect()
     const ws = latestWs()
     client.disconnect()
     expect(ws.close).toHaveBeenCalled()
   })
 
   it('disconnect prevents reconnect', () => {
-    client.connect('sess')
+    client.connect()
     const ws = latestWs()
     client.disconnect()
     // Simulate the onclose that ws.close() triggers

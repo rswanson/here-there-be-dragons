@@ -6,20 +6,7 @@ use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest};
 
 /// Register a user and return the access_token cookie value.
 async fn get_auth_cookie(app: &common::TestApp) -> String {
-    let resp = app
-        .client
-        .post(app.url("/api/auth/register"))
-        .json(&serde_json::json!({
-            "email": "ws-test@example.com",
-            "password": "password123",
-            "display_name": "WS Tester"
-        }))
-        .send()
-        .await
-        .expect("Failed to register");
-    assert!(resp.status().is_success());
-
-    // Extract access_token from Set-Cookie headers
+    let resp = common::register_user(app, "ws-test@example.com", "password123", "WS Tester").await;
     resp.cookies()
         .find(|c| c.name() == "access_token")
         .expect("No access_token cookie in response")

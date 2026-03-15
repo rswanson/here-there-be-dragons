@@ -62,7 +62,7 @@ test-e2e: ## Run Playwright e2e tests
 lint: lint-server lint-client ## Lint everything
 
 lint-server: ## Run clippy
-	cargo clippy --workspace -- -D warnings
+	SQLX_OFFLINE=true cargo clippy --workspace -- -D warnings
 
 lint-client: ## Run ESLint
 	cd client && npm run lint

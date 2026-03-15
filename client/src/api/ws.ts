@@ -9,10 +9,10 @@ export class WsClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private intentionalClose = false
 
-  connect(sessionId: string) {
+  connect() {
     this.intentionalClose = false
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${window.location.host}/api/ws?session=${sessionId}`
+    const url = `${protocol}//${window.location.host}/api/ws`
 
     this.ws = new WebSocket(url)
 
@@ -27,7 +27,7 @@ export class WsClient {
 
     this.ws.onclose = () => {
       if (!this.intentionalClose) {
-        this.reconnectTimer = setTimeout(() => this.connect(sessionId), 3000)
+        this.reconnectTimer = setTimeout(() => this.connect(), 3000)
       }
     }
 

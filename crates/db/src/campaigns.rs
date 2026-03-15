@@ -31,6 +31,21 @@ pub struct CampaignMemberRow {
     pub display_name: String,
 }
 
+impl From<CampaignMemberRow> for htbd_core::models::CampaignMember {
+    fn from(row: CampaignMemberRow) -> Self {
+        Self {
+            campaign_id: row.campaign_id,
+            user_id: row.user_id,
+            role: row
+                .role
+                .parse()
+                .unwrap_or(htbd_core::models::CampaignRole::Player),
+            display_name: row.display_name,
+            joined_at: row.joined_at,
+        }
+    }
+}
+
 pub async fn create_campaign(
     pool: &PgPool,
     name: &str,
