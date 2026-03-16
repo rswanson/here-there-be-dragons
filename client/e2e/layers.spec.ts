@@ -50,7 +50,7 @@ test.describe('Layer Management', () => {
     await page.locator('select:not(#map-selector)').selectOption('token')
     await page.getByRole('button', { name: 'Add' }).click()
 
-    await expect(page.getByText('Token Layer')).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByText('Token Layer', { exact: true })).toBeVisible({ timeout: 5_000 })
   })
 
   test('DM can add a DM-only layer', async ({ page }) => {

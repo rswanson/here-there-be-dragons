@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { setupCampaignWithMap } from './helpers'
 
+// Skip in CI — snapshots are platform-dependent (darwin vs linux render differently)
+test.skip(!!process.env.CI, 'Visual regression tests are local-only (platform-dependent snapshots)')
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
