@@ -11,7 +11,7 @@ use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
 use htbd_core::map::*;
 
-use super::guards::require_dm;
+use super::guards::require_dm_for_layer;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -20,21 +20,6 @@ pub fn routes() -> Router<AppState> {
             "/images/{id}",
             axum::routing::patch(update_image).delete(delete_image),
         )
-}
-
-/// Resolve layer_id → map_id → campaign_id and require DM
-async fn require_dm_for_layer(
-    state: &AppState,
-    layer_id: &Uuid,
-    user_id: Uuid,
-) -> Result<(), AppError> {
-    let map_id = db::map_layers::get_map_id_for_layer(&state.pool, layer_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    let map_row = db::maps::find_by_id(&state.pool, &map_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    require_dm(state, map_row.campaign_id, user_id).await
 }
 
 async fn place_image(
