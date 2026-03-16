@@ -6,6 +6,9 @@ import type { GridRenderer } from './GridRenderer'
 import type { LayerManager } from './LayerManager'
 import type { TokenRenderer } from './TokenRenderer'
 import type { TokenInteraction } from './TokenInteraction'
+import type { DrawingRenderer } from './DrawingRenderer'
+import type { DrawingTools } from './DrawingTools'
+import type { AoeTemplates } from './AoeTemplates'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -24,6 +27,9 @@ export function CanvasView() {
   const layerManagerRef = useRef<LayerManager | null>(null)
   const tokenRendererRef = useRef<TokenRenderer | null>(null)
   const tokenInteractionRef = useRef<TokenInteraction | null>(null)
+  const drawingRendererRef = useRef<DrawingRenderer | null>(null)
+  const drawingToolsRef = useRef<DrawingTools | null>(null)
+  const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -115,6 +121,63 @@ export function CanvasView() {
         }
         tokenInteractionRef.current = new TokenInteraction(app, viewportRef.current, layerManagerRef.current)
 
+        const { DrawingRenderer } = await import('./DrawingRenderer')
+        if (!mounted) {
+          tokenInteractionRef.current.destroy()
+          tokenInteractionRef.current = null
+          tokenRendererRef.current.destroy()
+          tokenRendererRef.current = null
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        drawingRendererRef.current = new DrawingRenderer(layerManagerRef.current)
+
+        const { DrawingTools } = await import('./DrawingTools')
+        if (!mounted) {
+          drawingRendererRef.current.destroy()
+          drawingRendererRef.current = null
+          tokenInteractionRef.current.destroy()
+          tokenInteractionRef.current = null
+          tokenRendererRef.current.destroy()
+          tokenRendererRef.current = null
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        drawingToolsRef.current = new DrawingTools(app, viewportRef.current, layerManagerRef.current)
+
+        const { AoeTemplates } = await import('./AoeTemplates')
+        if (!mounted) {
+          drawingToolsRef.current.destroy()
+          drawingToolsRef.current = null
+          drawingRendererRef.current.destroy()
+          drawingRendererRef.current = null
+          tokenInteractionRef.current.destroy()
+          tokenInteractionRef.current = null
+          tokenRendererRef.current.destroy()
+          tokenRendererRef.current = null
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        aoeTemplatesRef.current = new AoeTemplates(app, viewportRef.current)
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -146,6 +209,12 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        aoeTemplatesRef.current?.destroy()
+        aoeTemplatesRef.current = null
+        drawingToolsRef.current?.destroy()
+        drawingToolsRef.current = null
+        drawingRendererRef.current?.destroy()
+        drawingRendererRef.current = null
         tokenInteractionRef.current?.destroy()
         tokenInteractionRef.current = null
         tokenRendererRef.current?.destroy()
