@@ -1,10 +1,10 @@
 import type { Application } from 'pixi.js'
 import type { Token } from '../types/Token'
 import { useTokenStore } from '../state/tokens'
-import { useMapStore } from '../state/map'
 import { gridToPixel, snapToCenter } from './math/grid'
 import type { Viewport } from './Viewport'
 import type { LayerManager } from './LayerManager'
+import { throttle, getCellSize } from './utils'
 
 export interface SelectionRect {
   x: number
@@ -55,28 +55,6 @@ export function getTokensInRect(tokens: Token[], rect: SelectionRect, gridSize: 
       cy <= rect.y + rect.height
     )
   })
-}
-
-// ---------------------------------------------------------------------------
-// Throttle utility — only calls fn at most once per `ms` milliseconds.
-// A trailing call is always scheduled so the final position is committed.
-// ---------------------------------------------------------------------------
-function throttle<T extends (...args: Parameters<T>) => void>(fn: T, ms: number): T {
-  let lastCall = 0
-  let timer: ReturnType<typeof setTimeout> | null = null
-  return ((...args: Parameters<T>) => {
-    const now = Date.now()
-    if (now - lastCall >= ms) {
-      lastCall = now
-      fn(...args)
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        lastCall = Date.now()
-        timer = null
-        fn(...args)
-      }, ms - (now - lastCall))
-    }
-  }) as T
 }
 
 interface DragState {
@@ -145,7 +123,7 @@ export class TokenInteraction {
   private getTokenAtScreen(screenX: number, screenY: number): Token | null {
     const world = this.viewport.screenToWorld(screenX, screenY)
     const tokens = useTokenStore.getState().tokens
-    const gridSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const gridSize = getCellSize()
 
     // Iterate in reverse so tokens rendered on top are hit-tested first
     for (let i = tokens.length - 1; i >= 0; i--) {
@@ -216,7 +194,7 @@ export class TokenInteraction {
     const world = this.viewport.screenToWorld(screenX, screenY)
 
     if (this.dragState) {
-      const gridSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+      const gridSize = getCellSize()
       const dx = world.x - this.dragState.startWorldX
       const dy = world.y - this.dragState.startWorldY
 
@@ -262,7 +240,7 @@ export class TokenInteraction {
       }
 
       const tokens = useTokenStore.getState().tokens
-      const gridSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+      const gridSize = getCellSize()
       const selected = getTokensInRect(tokens, selectionRect, gridSize)
       useTokenStore.getState().boxSelect(selected.map((t) => t.id))
 

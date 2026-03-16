@@ -114,6 +114,12 @@ export class Viewport {
     }
   }
 
+  /** Convert a screen-space MouseEvent to world-space coordinates. */
+  screenToWorldFromEvent(e: MouseEvent): { x: number; y: number } {
+    const rect = (this.app.canvas as HTMLCanvasElement).getBoundingClientRect()
+    return this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top)
+  }
+
   /** Convert a world-space point to screen-space coordinates. */
   worldToScreen(wx: number, wy: number): { x: number; y: number } {
     const scale = this.container.scale.x

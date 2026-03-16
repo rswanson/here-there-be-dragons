@@ -9,6 +9,7 @@ import type { DrawingType } from '../types/DrawingType'
 import { simplifyPoints } from './math/simplify'
 import type { Viewport } from './Viewport'
 import type { LayerManager } from './LayerManager'
+import { parsePoints, hexToNumber, newDrawingId, throttle } from './utils'
 
 // ---------------------------------------------------------------------------
 // Pure utility helpers (exported for tests)
@@ -36,14 +37,6 @@ export function isDrawingTool(tool: string): boolean {
 
 export function isAoeTool(tool: string): boolean {
   return AOE_TOOLS.has(tool as ToolName)
-}
-
-/** Parse the points JSON stored on a Drawing into an array of {x,y} objects. */
-function parsePoints(raw: Drawing['points']): Array<{ x: number; y: number }> {
-  if (!Array.isArray(raw)) return []
-  return (raw as Array<{ x: number; y: number }>).filter(
-    (p) => typeof p?.x === 'number' && typeof p?.y === 'number',
-  )
 }
 
 /**
@@ -132,40 +125,10 @@ function distToSegment(
 }
 
 // ---------------------------------------------------------------------------
-// Throttle utility — calls fn at most once per `ms` milliseconds.
-// A trailing call is always scheduled so the final position is captured.
-// ---------------------------------------------------------------------------
-function throttle<T extends (...args: Parameters<T>) => void>(fn: T, ms: number): T {
-  let lastCall = 0
-  let timer: ReturnType<typeof setTimeout> | null = null
-  return ((...args: Parameters<T>) => {
-    const now = Date.now()
-    if (now - lastCall >= ms) {
-      lastCall = now
-      fn(...args)
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        lastCall = Date.now()
-        timer = null
-        fn(...args)
-      }, ms - (now - lastCall))
-    }
-  }) as T
-}
-
-// ---------------------------------------------------------------------------
 // DrawingTools class — event-driven tool state machine
 // ---------------------------------------------------------------------------
 
 type Point = { x: number; y: number }
-
-function hexToNumber(hex: string): number {
-  return parseInt(hex.replace('#', ''), 16)
-}
-
-function newDrawingId(): string {
-  return `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
 
 /** A PixiJS Graphics overlay for previewing in-progress strokes. */
 export class DrawingTools {
@@ -222,12 +185,6 @@ export class DrawingTools {
 
   private getActiveTool(): ToolName {
     return useToolStore.getState().activeTool
-  }
-
-  private screenToWorld(e: MouseEvent): Point {
-    const canvas = this.app.canvas as HTMLCanvasElement
-    const rect = canvas.getBoundingClientRect()
-    return this.viewport.screenToWorld(e.clientX - rect.left, e.clientY - rect.top)
   }
 
   private getOrCreatePreview(): Graphics {
@@ -296,7 +253,7 @@ export class DrawingTools {
   private handleMouseDown(e: MouseEvent): void {
     if (e.button !== 0 || e.altKey) return
     const tool = this.getActiveTool()
-    const world = this.screenToWorld(e)
+    const world = this.viewport.screenToWorldFromEvent(e)
 
     if (tool === 'freehand') {
       this.freehandPoints = [world]
@@ -318,7 +275,7 @@ export class DrawingTools {
 
   private handleMouseMove(e: MouseEvent): void {
     const tool = this.getActiveTool()
-    const world = this.screenToWorld(e)
+    const world = this.viewport.screenToWorldFromEvent(e)
 
     if (tool === 'freehand' && this.freehandPoints.length > 0) {
       this.throttledFreehandMove(world)
@@ -335,7 +292,7 @@ export class DrawingTools {
   private handleMouseUp(e: MouseEvent): void {
     if (e.button !== 0) return
     const tool = this.getActiveTool()
-    const world = this.screenToWorld(e)
+    const world = this.viewport.screenToWorldFromEvent(e)
 
     if (tool === 'freehand' && this.freehandPoints.length >= 2) {
       const simplified = simplifyPoints(this.freehandPoints, 2)

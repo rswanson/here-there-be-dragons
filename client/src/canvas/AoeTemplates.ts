@@ -14,6 +14,7 @@ import {
 import { gridToPixel, pixelToGrid } from './math/grid'
 import { isAoeTool } from './DrawingTools'
 import type { Viewport } from './Viewport'
+import { newDrawingId, getCellSize } from './utils'
 
 const AOE_FILL_COLOR = 0xff4400
 const AOE_FILL_ALPHA = 0.35
@@ -27,10 +28,6 @@ const AOE_DEFAULTS: Record<string, { radius?: number; size?: number; length?: nu
   aoe_cube: { size: 3 },
   aoe_cone: { length: 4, angle: 90 },
   aoe_line: { length: 6, width: 1 },
-}
-
-function newDrawingId(): string {
-  return `drawing-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
 function squaresToPoints(
@@ -87,12 +84,6 @@ export class AoeTemplates {
     canvas.addEventListener('mousedown', this.onMouseDown)
   }
 
-  private screenToWorld(e: MouseEvent): { x: number; y: number } {
-    const canvas = this.app.canvas as HTMLCanvasElement
-    const rect = canvas.getBoundingClientRect()
-    return this.viewport.screenToWorld(e.clientX - rect.left, e.clientY - rect.top)
-  }
-
   private handleMouseMove(e: MouseEvent): void {
     const tool = useToolStore.getState().activeTool
     if (!isAoeTool(tool)) {
@@ -103,7 +94,7 @@ export class AoeTemplates {
       return
     }
 
-    const world = this.screenToWorld(e)
+    const world = this.viewport.screenToWorldFromEvent(e)
 
     // Compute direction from last cursor position
     if (this.lastCursor) {
@@ -124,7 +115,7 @@ export class AoeTemplates {
     const tool = useToolStore.getState().activeTool
     if (!isAoeTool(tool)) return
 
-    const world = this.screenToWorld(e)
+    const world = this.viewport.screenToWorldFromEvent(e)
     this.placeAoe(tool as DrawingType, world)
   }
 
@@ -133,7 +124,7 @@ export class AoeTemplates {
     worldX: number,
     worldY: number,
   ): Array<{ col: number; row: number }> {
-    const cellSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const cellSize = getCellSize()
     const { col, row } = pixelToGrid(worldX, worldY, cellSize)
     const defaults = AOE_DEFAULTS[tool] ?? {}
 
@@ -153,7 +144,7 @@ export class AoeTemplates {
 
   private renderOverlay(tool: DrawingType, world: { x: number; y: number }): void {
     this.overlay.clear()
-    const cellSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const cellSize = getCellSize()
     const squares = this.getAffectedSquares(tool, world.x, world.y)
     const scale = (this.viewport as unknown as { container: { scale: { x: number }; position: { x: number; y: number } } }).container.scale.x
     const vx = (this.viewport as unknown as { container: { scale: { x: number }; position: { x: number; y: number } } }).container.position.x
@@ -175,7 +166,7 @@ export class AoeTemplates {
     const layerId = useMapStore.getState().activeLayerId
     if (!layerId) return
 
-    const cellSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const cellSize = getCellSize()
     const squares = this.getAffectedSquares(tool, world.x, world.y)
     if (squares.length === 0) return
 
