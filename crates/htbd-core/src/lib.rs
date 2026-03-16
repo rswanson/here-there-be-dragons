@@ -2,6 +2,7 @@ pub mod auth;
 pub mod map;
 pub mod messages;
 pub mod models;
+pub mod token;
 
 // Re-export commonly used types
 pub use messages::*;
@@ -45,5 +46,11 @@ mod tests {
         map::UpdateLayerRequest::export_all_to(&out_dir).unwrap();
         map::PlaceMapImageRequest::export_all_to(&out_dir).unwrap();
         map::UpdateMapImageRequest::export_all_to(&out_dir).unwrap();
+
+        // Token
+        token::Token::export_all_to(&out_dir).unwrap();
+        token::TokenBar::export_all_to(&out_dir).unwrap();
+        token::CreateTokenRequest::export_all_to(&out_dir).unwrap();
+        token::UpdateTokenRequest::export_all_to(&out_dir).unwrap();
     }
 }
