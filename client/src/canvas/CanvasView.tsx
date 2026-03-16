@@ -3,6 +3,7 @@ import type { Application, Sprite } from 'pixi.js'
 import { useUiStore } from '../state/ui'
 import type { Viewport } from './Viewport'
 import type { GridRenderer } from './GridRenderer'
+import type { LayerManager } from './LayerManager'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -18,6 +19,7 @@ export function CanvasView() {
   const pixiRef = useRef<typeof import('pixi.js') | null>(null)
   const viewportRef = useRef<Viewport | null>(null)
   const gridRef = useRef<GridRenderer | null>(null)
+  const layerManagerRef = useRef<LayerManager | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -70,6 +72,17 @@ export function CanvasView() {
         }
         gridRef.current = new GridRenderer(app, viewportRef.current)
 
+        const { LayerManager } = await import('./LayerManager')
+        if (!mounted) {
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        layerManagerRef.current = new LayerManager(viewportRef.current)
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -101,6 +114,8 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        layerManagerRef.current?.destroy()
+        layerManagerRef.current = null
         gridRef.current?.destroy()
         gridRef.current = null
         viewportRef.current?.destroy()
