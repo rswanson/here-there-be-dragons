@@ -5,6 +5,7 @@ pub mod guards;
 pub mod layers;
 pub mod map_images;
 pub mod maps;
+pub mod tokens;
 pub mod ws;
 
 use crate::state::AppState;
@@ -19,4 +20,5 @@ pub fn api_routes() -> Router<AppState> {
         .merge(maps::routes())
         .merge(layers::routes())
         .merge(map_images::routes())
+        .merge(tokens::routes())
 }
