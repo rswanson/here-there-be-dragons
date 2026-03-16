@@ -9,6 +9,7 @@ import {
   pixelToGrid,
 } from './math/grid'
 import type { Viewport } from './Viewport'
+import { getCellSize } from './utils'
 
 const LINE_COLOR = 0x00d4ff
 const LINE_ALPHA = 0.9
@@ -71,12 +72,6 @@ export class MeasurementOverlay {
     })
   }
 
-  private screenToWorld(e: MouseEvent): { x: number; y: number } {
-    const canvas = this.app.canvas as HTMLCanvasElement
-    const rect = canvas.getBoundingClientRect()
-    return this.viewport.screenToWorld(e.clientX - rect.left, e.clientY - rect.top)
-  }
-
   private worldToScreen(wx: number, wy: number): { x: number; y: number } {
     return this.viewport.worldToScreen(wx, wy)
   }
@@ -86,7 +81,7 @@ export class MeasurementOverlay {
     altKey: boolean,
   ): { x: number; y: number } {
     if (altKey) return world
-    const cellSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const cellSize = getCellSize()
     return snapToCenter(world.x, world.y, cellSize)
   }
 
@@ -97,7 +92,7 @@ export class MeasurementOverlay {
     if (tool === 'ruler') {
       if (!this.isActive) {
         // Start ruler
-        const world = this.screenToWorld(e)
+        const world = this.viewport.screenToWorldFromEvent(e)
         const snapped = this.snapWorld(world, e.altKey)
         this.startWorld = snapped
         this.isActive = true
@@ -111,7 +106,7 @@ export class MeasurementOverlay {
     }
 
     if (tool === 'waypoint') {
-      const world = this.screenToWorld(e)
+      const world = this.viewport.screenToWorldFromEvent(e)
       const snapped = this.snapWorld(world, e.altKey)
       this.waypoints.push(snapped)
       this.isActive = true
@@ -123,7 +118,7 @@ export class MeasurementOverlay {
     const tool = useToolStore.getState().activeTool
     if (tool !== 'ruler' && tool !== 'waypoint') return
 
-    const world = this.screenToWorld(e)
+    const world = this.viewport.screenToWorldFromEvent(e)
     const snapped = this.snapWorld(world, e.altKey)
     this.cursorWorld = snapped
 
@@ -191,7 +186,7 @@ export class MeasurementOverlay {
   private drawRuler(): void {
     if (!this.startWorld || !this.cursorWorld) return
 
-    const cellSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const cellSize = getCellSize()
     const gridScale = useMapStore.getState().currentMap?.grid_scale ?? 5
     const diagMode = useMapStore.getState().currentMap?.diagonal_mode ?? 'dnd_standard'
 
@@ -225,7 +220,7 @@ export class MeasurementOverlay {
   private drawWaypoint(): void {
     if (this.waypoints.length === 0) return
 
-    const cellSize = useMapStore.getState().currentMap?.grid_size_px ?? 70
+    const cellSize = getCellSize()
     const gridScale = useMapStore.getState().currentMap?.grid_scale ?? 5
     const diagMode = useMapStore.getState().currentMap?.diagonal_mode ?? 'dnd_standard'
 

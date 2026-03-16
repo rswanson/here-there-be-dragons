@@ -1,8 +1,10 @@
+import type { DiagonalMode } from '../../types/DiagonalMode'
+import type { SnapMode } from '../../types/SnapMode'
+
+export type { DiagonalMode, SnapMode }
+
 export interface PixelPoint { x: number; y: number; }
 export interface GridPoint { col: number; row: number; }
-
-export type DiagonalMode = 'dnd_standard' | 'euclidean' | 'manhattan';
-export type SnapMode = 'off' | 'center' | 'corner';
 
 export function gridToPixel(col: number, row: number, cellSize: number): PixelPoint {
   return { x: col * cellSize, y: row * cellSize };

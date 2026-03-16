@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { Drawing } from '../types/Drawing';
 
+const MAX_UNDO_STACK = 50;
+
+function boundStack<T>(stack: T[]): T[] {
+  return stack.length > MAX_UNDO_STACK ? stack.slice(stack.length - MAX_UNDO_STACK) : stack;
+}
+
 interface UndoEntry {
   layerId: string;
   action: 'add' | 'remove';
@@ -36,10 +42,10 @@ export const useDrawingStore = create<DrawingState>()((set) => ({
   addDrawing: (drawing) =>
     set((s) => {
       const layerId = drawing.layer_id;
-      const undoStack = [
+      const undoStack = boundStack([
         ...(s.undoStacks[layerId] ?? []),
         { layerId, action: 'add' as const, drawing },
-      ];
+      ]);
       return {
         drawings: [...s.drawings, drawing],
         undoStacks: { ...s.undoStacks, [layerId]: undoStack },
@@ -52,10 +58,10 @@ export const useDrawingStore = create<DrawingState>()((set) => ({
       const drawing = s.drawings.find((d) => d.id === drawingId);
       if (!drawing) return s;
       const layerId = drawing.layer_id;
-      const undoStack = [
+      const undoStack = boundStack([
         ...(s.undoStacks[layerId] ?? []),
         { layerId, action: 'remove' as const, drawing },
-      ];
+      ]);
       return {
         drawings: s.drawings.filter((d) => d.id !== drawingId),
         undoStacks: { ...s.undoStacks, [layerId]: undoStack },
@@ -68,10 +74,10 @@ export const useDrawingStore = create<DrawingState>()((set) => ({
       const original = s.drawings.find((d) => d.id === drawingId);
       if (!original) return s;
       const layerId = original.layer_id;
-      const undoStack = [
+      const undoStack = boundStack([
         ...(s.undoStacks[layerId] ?? []),
         { layerId, action: 'remove' as const, drawing: original },
-      ];
+      ]);
       const updated = { ...original, ...patch };
       return {
         drawings: s.drawings.map((d) => (d.id === drawingId ? updated : d)),
@@ -87,7 +93,7 @@ export const useDrawingStore = create<DrawingState>()((set) => ({
 
       const entry = stack[stack.length - 1];
       const newUndo = stack.slice(0, -1);
-      const newRedo = [...(s.redoStacks[layerId] ?? []), entry];
+      const newRedo = boundStack([...(s.redoStacks[layerId] ?? []), entry]);
 
       let drawings: Drawing[];
       if (entry.action === 'add') {
@@ -110,7 +116,7 @@ export const useDrawingStore = create<DrawingState>()((set) => ({
 
       const entry = stack[stack.length - 1];
       const newRedo = stack.slice(0, -1);
-      const newUndo = [...(s.undoStacks[layerId] ?? []), entry];
+      const newUndo = boundStack([...(s.undoStacks[layerId] ?? []), entry]);
 
       let drawings: Drawing[];
       if (entry.action === 'add') {

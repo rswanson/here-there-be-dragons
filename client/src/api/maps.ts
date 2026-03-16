@@ -8,78 +8,63 @@ import type { UpdateLayerRequest } from '../types/UpdateLayerRequest'
 import type { MapImage } from '../types/MapImage'
 import type { PlaceMapImageRequest } from '../types/PlaceMapImageRequest'
 import type { UpdateMapImageRequest } from '../types/UpdateMapImageRequest'
-
-const base = '/api'
-
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const resp = await fetch(url, { credentials: 'include', ...options })
-  if (!resp.ok) throw new Error(`${resp.status}: ${await resp.text()}`)
-  if (resp.status === 204) return undefined as T
-  return resp.json()
-}
+import { request } from './client'
 
 export const mapsApi = {
   create: (campaignId: string, data: CreateMapRequest) =>
-    request<Map>(`${base}/campaigns/${campaignId}/maps`, {
+    request<Map>(`/campaigns/${campaignId}/maps`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }),
 
   list: (campaignId: string) =>
-    request<Map[]>(`${base}/campaigns/${campaignId}/maps`),
+    request<Map[]>(`/campaigns/${campaignId}/maps`),
 
   get: (mapId: string) =>
-    request<MapWithLayers>(`${base}/maps/${mapId}`),
+    request<MapWithLayers>(`/maps/${mapId}`),
 
   update: (mapId: string, data: UpdateMapRequest) =>
-    request<Map>(`${base}/maps/${mapId}`, {
+    request<Map>(`/maps/${mapId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }),
 
   delete: (mapId: string) =>
-    request<void>(`${base}/maps/${mapId}`, { method: 'DELETE' }),
+    request<void>(`/maps/${mapId}`, { method: 'DELETE' }),
 
   createLayer: (mapId: string, data: CreateLayerRequest) =>
-    request<MapLayer>(`${base}/maps/${mapId}/layers`, {
+    request<MapLayer>(`/maps/${mapId}/layers`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }),
 
   updateLayer: (layerId: string, data: UpdateLayerRequest) =>
-    request<MapLayer>(`${base}/layers/${layerId}`, {
+    request<MapLayer>(`/layers/${layerId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }),
 
   deleteLayer: (layerId: string) =>
-    request<void>(`${base}/layers/${layerId}`, { method: 'DELETE' }),
+    request<void>(`/layers/${layerId}`, { method: 'DELETE' }),
 
   reorderLayers: (mapId: string, layerIds: string[]) =>
-    request<void>(`${base}/maps/${mapId}/layers/order`, {
+    request<void>(`/maps/${mapId}/layers/order`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(layerIds),
     }),
 
   placeImage: (layerId: string, data: PlaceMapImageRequest) =>
-    request<MapImage>(`${base}/layers/${layerId}/images`, {
+    request<MapImage>(`/layers/${layerId}/images`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }),
 
   updateImage: (imageId: string, data: UpdateMapImageRequest) =>
-    request<MapImage>(`${base}/images/${imageId}`, {
+    request<MapImage>(`/images/${imageId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }),
 
   deleteImage: (imageId: string) =>
-    request<void>(`${base}/images/${imageId}`, { method: 'DELETE' }),
+    request<void>(`/images/${imageId}`, { method: 'DELETE' }),
 }
