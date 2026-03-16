@@ -11,6 +11,7 @@ import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
 import type { TextureManager } from './TextureManager'
+import type { AccessibilityDOM } from './AccessibilityDOM'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -34,6 +35,7 @@ export function CanvasView() {
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const measurementRef = useRef<MeasurementOverlay | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
+  const accessibilityRef = useRef<AccessibilityDOM | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -212,6 +214,31 @@ export function CanvasView() {
         }
         measurementRef.current = new MeasurementOverlay(app, viewportRef.current)
 
+        const { AccessibilityDOM } = await import('./AccessibilityDOM')
+        if (!mounted) {
+          measurementRef.current.destroy()
+          measurementRef.current = null
+          aoeTemplatesRef.current.destroy()
+          aoeTemplatesRef.current = null
+          drawingToolsRef.current.destroy()
+          drawingToolsRef.current = null
+          drawingRendererRef.current.destroy()
+          drawingRendererRef.current = null
+          tokenInteractionRef.current.destroy()
+          tokenInteractionRef.current = null
+          tokenRendererRef.current.destroy()
+          tokenRendererRef.current = null
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        accessibilityRef.current = new AccessibilityDOM(container)
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -243,6 +270,8 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        accessibilityRef.current?.destroy()
+        accessibilityRef.current = null
         measurementRef.current?.destroy()
         measurementRef.current = null
         aoeTemplatesRef.current?.destroy()
@@ -350,6 +379,7 @@ export function CanvasView() {
         aria-roledescription="virtual tabletop"
         className="sr-only"
         tabIndex={0}
+        aria-live="polite"
       >
         <p>{mapAssetUrl ? 'Map loaded on canvas.' : 'Empty canvas. Grid and tokens will appear here when a map is loaded.'}</p>
       </div>
