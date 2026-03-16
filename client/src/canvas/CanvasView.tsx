@@ -4,6 +4,8 @@ import { useUiStore } from '../state/ui'
 import type { Viewport } from './Viewport'
 import type { GridRenderer } from './GridRenderer'
 import type { LayerManager } from './LayerManager'
+import type { TokenRenderer } from './TokenRenderer'
+import type { TokenInteraction } from './TokenInteraction'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -20,6 +22,8 @@ export function CanvasView() {
   const viewportRef = useRef<Viewport | null>(null)
   const gridRef = useRef<GridRenderer | null>(null)
   const layerManagerRef = useRef<LayerManager | null>(null)
+  const tokenRendererRef = useRef<TokenRenderer | null>(null)
+  const tokenInteractionRef = useRef<TokenInteraction | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -83,6 +87,34 @@ export function CanvasView() {
         }
         layerManagerRef.current = new LayerManager(viewportRef.current)
 
+        const { TokenRenderer } = await import('./TokenRenderer')
+        if (!mounted) {
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        tokenRendererRef.current = new TokenRenderer(layerManagerRef.current)
+
+        const { TokenInteraction } = await import('./TokenInteraction')
+        if (!mounted) {
+          tokenRendererRef.current.destroy()
+          tokenRendererRef.current = null
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        tokenInteractionRef.current = new TokenInteraction(app, viewportRef.current, layerManagerRef.current)
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -114,6 +146,10 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        tokenInteractionRef.current?.destroy()
+        tokenInteractionRef.current = null
+        tokenRendererRef.current?.destroy()
+        tokenRendererRef.current = null
         layerManagerRef.current?.destroy()
         layerManagerRef.current = null
         gridRef.current?.destroy()
