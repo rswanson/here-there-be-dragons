@@ -22,7 +22,7 @@ async function login(page: Page, email: string, password: string): Promise<void>
   await page.goto('/login')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Log in' }).click()
+  await page.getByRole('button', { name: 'Login' }).click()
   await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
 }
 
@@ -117,7 +117,14 @@ test.describe('Permissions & Access Control', () => {
     await page.getByRole('button', { name: 'Add' }).click()
 
     await expect(page.getByText('Hidden Layer')).toBeVisible({ timeout: 5_000 })
-    await expect(page.locator('span', { hasText: 'DM' })).toBeVisible()
+    // Verify the DM badge appears in the Hidden Layer's row
+    const hasDmBadge = await page.getByText('Hidden Layer', { exact: true }).evaluate((el) => {
+      const row = el.parentElement
+      if (!row) return false
+      const badges = row.querySelectorAll('span')
+      return Array.from(badges).some((s) => s.textContent?.trim() === 'DM')
+    })
+    expect(hasDmBadge).toBe(true)
   })
 
   test('registration with a duplicate email shows an error', async ({ page }) => {
@@ -145,7 +152,7 @@ test.describe('Permissions & Access Control', () => {
     await page.goto('/login')
     await page.getByLabel('Email').fill('nobody@nowhere.com')
     await page.getByLabel('Password').fill('wrongpassword')
-    await page.getByRole('button', { name: 'Log in' }).click()
+    await page.getByRole('button', { name: 'Login' }).click()
 
     // Should not redirect to /campaigns — stay on /login or show error
     const url = page.url()

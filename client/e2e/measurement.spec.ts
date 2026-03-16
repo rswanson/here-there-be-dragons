@@ -81,7 +81,7 @@ test.describe('Measurement Tools', () => {
 
     // The accessibility DOM includes an aria-live region for measurements
     // (see AccessibilityDOM.ts). Verify it is present in the DOM.
-    const ariaLive = page.locator('[aria-live]')
+    const ariaLive = page.locator('[aria-live][aria-atomic="true"]')
     await expect(ariaLive).toBeAttached({ timeout: 5_000 })
   })
 

@@ -160,10 +160,16 @@ test.describe('Map Management', () => {
     await navigateToCampaign(page, 'Multi Map Test')
 
     await createMap(page)
-    await createMap(page)
 
-    // Selector should have at least 2 non-placeholder options
+    // Before creating the second map, record the current option count
     const selector = page.locator('#map-selector')
+    const countBefore = await selector.locator('option:not([value=""])').count()
+
+    await page.getByRole('button', { name: '+ New Map' }).click()
+
+    // Wait until the selector has more options than before (query invalidation may take a moment)
+    await expect(selector.locator('option:not([value=""])')).not.toHaveCount(countBefore, { timeout: 10_000 })
+
     const optionCount = await selector.locator('option:not([value=""])').count()
     expect(optionCount).toBeGreaterThanOrEqual(2)
   })

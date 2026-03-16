@@ -41,7 +41,7 @@ test.describe('Layer Management', () => {
     await registerAndLogin(page, `e2e-lay-visible-${timestamp}@test.com`, password)
     await createCampaignAndMap(page, 'Layer Panel Visible Test')
 
-    await expect(page.getByText('Layers')).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('heading', { name: 'Layers' })).toBeVisible({ timeout: 5_000 })
     await expect(page.getByRole('button', { name: '+ Add Layer' })).toBeVisible()
   })
 
@@ -66,7 +66,7 @@ test.describe('Layer Management', () => {
     await openAddLayerForm(page)
 
     await page.getByPlaceholder('Layer name').fill('Token Layer')
-    await page.locator('select').selectOption('token')
+    await page.locator('select:not(#map-selector)').selectOption('token')
     await page.getByRole('button', { name: 'Add' }).click()
 
     await expect(page.getByText('Token Layer')).toBeVisible({ timeout: 5_000 })
@@ -84,7 +84,15 @@ test.describe('Layer Management', () => {
 
     // DM-only layers show a "DM" badge in the panel
     await expect(page.getByText('Secret Layer')).toBeVisible({ timeout: 5_000 })
-    await expect(page.locator('span', { hasText: 'DM' })).toBeVisible()
+    // Verify the DM badge appears next to the Secret Layer
+    // Use evaluate to check the Secret Layer span's parent row for a DM badge
+    const hasDmBadge = await page.getByText('Secret Layer', { exact: true }).evaluate((el) => {
+      const row = el.parentElement
+      if (!row) return false
+      const badges = row.querySelectorAll('span')
+      return Array.from(badges).some((s) => s.textContent?.trim() === 'DM')
+    })
+    expect(hasDmBadge).toBe(true)
   })
 
   test('Cancel button dismisses the add layer form', async ({ page }) => {
@@ -146,7 +154,10 @@ test.describe('Layer Management', () => {
 
     // Accept the confirmation dialog
     page.on('dialog', (d) => d.accept())
-    await page.locator('button[title="Delete layer"]').first().click()
+    // Click the delete button within the row that contains "Deletable Layer"
+    // The span's parentElement is the row div; find the delete button within it
+    const deleteBtn = page.getByText('Deletable Layer', { exact: true }).locator('..').locator('button[title="Delete layer"]')
+    await deleteBtn.click()
 
     await expect(page.getByText('Deletable Layer')).not.toBeVisible({ timeout: 5_000 })
   })
@@ -161,11 +172,15 @@ test.describe('Layer Management', () => {
     await expect(page.getByText('Active Layer')).toBeVisible({ timeout: 5_000 })
 
     // Click the layer name area to select it
-    await page.getByText('Active Layer').click()
+    await page.getByText('Active Layer', { exact: true }).click()
 
     // Active layer row gets primary background colour
-    const layerRow = page.locator('div').filter({ hasText: 'Active Layer' }).first()
-    const bg = await layerRow.evaluate((el) => (el as HTMLElement).style.background)
+    // The layer name span's parent div is the clickable row with the active background
+    const bg = await page.getByText('Active Layer', { exact: true }).evaluate((el) => {
+      // Walk up to the row div (span -> div row)
+      const row = el.parentElement as HTMLElement | null
+      return row ? row.style.background : ''
+    })
     expect(bg).toContain('6366f1')
   })
 

@@ -40,10 +40,12 @@ test.describe('Drawing Tools', () => {
     await registerAndLogin(page, `e2e-draw-tools-${timestamp}@test.com`, password)
     await createCampaignAndMap(page, 'Drawing Tools Present Test')
 
-    const drawTools = ['Freehand', 'Line', 'Rectangle', 'Circle', 'Polygon', 'Eraser']
+    const drawTools = ['Freehand', 'Rectangle', 'Circle', 'Polygon', 'Eraser']
     for (const tool of drawTools) {
       await expect(page.getByRole('button', { name: tool })).toBeVisible()
     }
+    // "Line" appears in both Draw and AoE groups; use the title to disambiguate
+    await expect(page.locator('button[title="Line (L)"]')).toBeVisible()
   })
 
   test('AoE tools are present in the toolbar', async ({ page }) => {
@@ -134,7 +136,8 @@ test.describe('Drawing Tools', () => {
     const errors: string[] = []
     page.on('pageerror', (err) => errors.push(err.message))
 
-    await activateTool(page, 'Line')
+    // "Line" appears in both Draw and AoE groups; use title to select the drawing Line tool
+    await page.locator('button[title="Line (L)"]').click()
 
     const canvas = page.locator('canvas')
     const box = await canvas.boundingBox()
