@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod drawing;
 pub mod map;
 pub mod messages;
 pub mod models;
@@ -52,5 +53,11 @@ mod tests {
         token::TokenBar::export_all_to(&out_dir).unwrap();
         token::CreateTokenRequest::export_all_to(&out_dir).unwrap();
         token::UpdateTokenRequest::export_all_to(&out_dir).unwrap();
+
+        // Drawing
+        drawing::Drawing::export_all_to(&out_dir).unwrap();
+        drawing::DrawingType::export_all_to(&out_dir).unwrap();
+        drawing::CreateDrawingRequest::export_all_to(&out_dir).unwrap();
+        drawing::UpdateDrawingRequest::export_all_to(&out_dir).unwrap();
     }
 }
