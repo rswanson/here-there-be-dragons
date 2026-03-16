@@ -135,9 +135,52 @@ worktree-clean:
 [group("ci")]
 check: fmt-check lint test build-client
 
-# Run full CI including e2e (requires running DB + server + client)
+# Run full CI including e2e (starts/stops DB, server, and Vite automatically)
 [group("ci")]
-check-all: check test-e2e
+check-all: check
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -a; source .env; set +a
+
+    cleanup() {
+        echo "Tearing down..."
+        [ -n "${VITE_PID:-}" ] && kill "$VITE_PID" 2>/dev/null && wait "$VITE_PID" 2>/dev/null || true
+        [ -n "${SERVER_PID:-}" ] && kill "$SERVER_PID" 2>/dev/null && wait "$SERVER_PID" 2>/dev/null || true
+        docker compose -f docker/docker-compose.dev.yml stop db 2>/dev/null || true
+    }
+    trap cleanup EXIT
+
+    # Start DB
+    docker compose -f docker/docker-compose.dev.yml up db -d --wait
+    echo "DB ready"
+
+    # Run migrations (install sqlx-cli if missing)
+    command -v sqlx >/dev/null || cargo install sqlx-cli --no-default-features --features postgres
+    sqlx migrate run
+
+    # Start server
+    cargo run -p server &
+    SERVER_PID=$!
+    for i in $(seq 1 30); do
+        curl -sf http://localhost:3000/api/health >/dev/null 2>&1 && break
+        sleep 1
+    done
+    curl -sf http://localhost:3000/api/health >/dev/null || { echo "Server failed to start"; exit 1; }
+    echo "Server ready"
+
+    # Start Vite
+    cd client && npm run dev &
+    VITE_PID=$!
+    cd ..
+    for i in $(seq 1 15); do
+        curl -sf http://localhost:5173 >/dev/null 2>&1 && break
+        sleep 1
+    done
+    curl -sf http://localhost:5173 >/dev/null || { echo "Vite failed to start"; exit 1; }
+    echo "Vite ready"
+
+    # Run E2E
+    cd client && npx playwright test
 
 # Remove build artifacts
 clean:
