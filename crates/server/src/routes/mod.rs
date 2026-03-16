@@ -2,6 +2,7 @@ pub mod assets;
 pub mod auth;
 pub mod campaigns;
 pub mod guards;
+pub mod layers;
 pub mod maps;
 pub mod ws;
 
@@ -15,4 +16,5 @@ pub fn api_routes() -> Router<AppState> {
         .nest("/assets", assets::routes())
         .nest("/ws", ws::routes())
         .merge(maps::routes())
+        .merge(layers::routes())
 }
