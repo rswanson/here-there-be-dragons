@@ -182,6 +182,33 @@ check-all: check
     # Run E2E
     cd client && npx playwright test
 
+# Update visual regression snapshots for Linux (requires running DB + server + Vite)
+[group("test")]
+update-snapshots-linux:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Verify the dev stack is reachable
+    curl -sf http://localhost:3000/api/health >/dev/null || { echo "Server not running on :3000 — start with: just dev-db & just dev-server"; exit 1; }
+    curl -sf http://localhost:5173 >/dev/null || { echo "Vite not running on :5173 — start with: just dev-client"; exit 1; }
+
+    PW_VERSION=$(cd client && node -p "require('@playwright/test/package.json').version")
+    echo "Using Playwright v${PW_VERSION} Docker image"
+
+    # host.docker.internal resolves to the host on macOS/Windows Docker Desktop.
+    # On Linux Docker, --add-host provides it. We use it as the base URL so
+    # the containerized browser can reach the host's Vite dev server.
+    docker run --rm \
+        --add-host=host.docker.internal:host-gateway \
+        -v "$(pwd)/client:/work" \
+        -w /work \
+        -e BASE_URL=http://host.docker.internal:5173 \
+        "mcr.microsoft.com/playwright:v${PW_VERSION}" \
+        npx playwright test e2e/visual-regression.spec.ts --update-snapshots
+
+    echo "Linux snapshots updated. Review and commit:"
+    echo "  ls client/e2e/visual-regression.spec.ts-snapshots/*-linux.png"
+
 # Remove build artifacts
 clean:
     cargo clean
