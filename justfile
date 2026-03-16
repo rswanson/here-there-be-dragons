@@ -1,3 +1,6 @@
+# Load .env automatically for all recipes
+set dotenv-load
+
 # Default recipe: show help
 default:
     @just --list
@@ -127,6 +130,14 @@ worktree-clean:
             git worktree remove "$wt"
         fi
     done
+
+# Run all pre-push checks (mirrors CI exactly)
+[group("ci")]
+check: fmt-check lint test build-client
+
+# Run full CI including e2e (requires running DB + server + client)
+[group("ci")]
+check-all: check test-e2e
 
 # Remove build artifacts
 clean:
