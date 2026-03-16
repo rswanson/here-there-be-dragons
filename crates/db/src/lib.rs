@@ -1,5 +1,6 @@
 pub mod assets;
 pub mod campaigns;
+pub mod maps;
 pub mod refresh_tokens;
 pub mod users;
 
