@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Application, Sprite } from 'pixi.js'
 import { useUiStore } from '../state/ui'
+import type { Viewport } from './Viewport'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -14,6 +15,7 @@ export function CanvasView() {
   const appRef = useRef<PixiApp | null>(null)
   const spriteRef = useRef<Sprite | null>(null)
   const pixiRef = useRef<typeof import('pixi.js') | null>(null)
+  const viewportRef = useRef<Viewport | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -48,6 +50,15 @@ export function CanvasView() {
         }
 
         appRef.current = app
+
+        // Create the viewport after the app is ready so canvas events work
+        const { Viewport } = await import('./Viewport')
+        if (!mounted) {
+          app.destroy()
+          return
+        }
+        viewportRef.current = new Viewport(app)
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -79,6 +90,8 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        viewportRef.current?.destroy()
+        viewportRef.current = null
         app.destroy()
       }
       appRef.current = null
@@ -96,10 +109,11 @@ export function CanvasView() {
 
     const loadMap = async () => {
       const app = appRef.current
-      if (!app || cancelled) return
+      const viewport = viewportRef.current
+      if (!app || !viewport || cancelled) return
 
       if (spriteRef.current) {
-        app.stage.removeChild(spriteRef.current)
+        viewport.container.removeChild(spriteRef.current)
         spriteRef.current.destroy()
         spriteRef.current = null
       }
@@ -116,16 +130,12 @@ export function CanvasView() {
           img.onload = () => resolve()
           img.onerror = () => reject(new Error(`Failed to load image: ${mapAssetUrl}`))
         })
-        if (cancelled || !appRef.current) return
+        if (cancelled || !appRef.current || !viewportRef.current) return
         const texture = PIXI.Texture.from(img)
         const sprite = new PIXI.Sprite(texture)
-        const scaleX = app.screen.width / sprite.width
-        const scaleY = app.screen.height / sprite.height
-        const scale = Math.min(scaleX, scaleY)
-        sprite.scale.set(scale)
-        sprite.x = (app.screen.width - sprite.width) / 2
-        sprite.y = (app.screen.height - sprite.height) / 2
-        app.stage.addChild(sprite)
+        // Fit the map to the screen and use fitToRect for a proper viewport fit
+        viewportRef.current.fitToRect(sprite.width, sprite.height)
+        viewportRef.current.container.addChild(sprite)
         spriteRef.current = sprite
       } catch (err) {
         console.error('Failed to load map asset:', err)
