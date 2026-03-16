@@ -9,6 +9,7 @@ import type { TokenInteraction } from './TokenInteraction'
 import type { DrawingRenderer } from './DrawingRenderer'
 import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
+import type { MeasurementOverlay } from './MeasurementOverlay'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -30,6 +31,7 @@ export function CanvasView() {
   const drawingRendererRef = useRef<DrawingRenderer | null>(null)
   const drawingToolsRef = useRef<DrawingTools | null>(null)
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
+  const measurementRef = useRef<MeasurementOverlay | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -178,6 +180,29 @@ export function CanvasView() {
         }
         aoeTemplatesRef.current = new AoeTemplates(app, viewportRef.current)
 
+        const { MeasurementOverlay } = await import('./MeasurementOverlay')
+        if (!mounted) {
+          aoeTemplatesRef.current.destroy()
+          aoeTemplatesRef.current = null
+          drawingToolsRef.current.destroy()
+          drawingToolsRef.current = null
+          drawingRendererRef.current.destroy()
+          drawingRendererRef.current = null
+          tokenInteractionRef.current.destroy()
+          tokenInteractionRef.current = null
+          tokenRendererRef.current.destroy()
+          tokenRendererRef.current = null
+          layerManagerRef.current.destroy()
+          layerManagerRef.current = null
+          gridRef.current.destroy()
+          gridRef.current = null
+          viewportRef.current.destroy()
+          viewportRef.current = null
+          app.destroy()
+          return
+        }
+        measurementRef.current = new MeasurementOverlay(app, viewportRef.current)
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -209,6 +234,8 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        measurementRef.current?.destroy()
+        measurementRef.current = null
         aoeTemplatesRef.current?.destroy()
         aoeTemplatesRef.current = null
         drawingToolsRef.current?.destroy()
