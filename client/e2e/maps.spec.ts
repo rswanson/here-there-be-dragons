@@ -1,36 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
-
-async function registerAndLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill('Maps Tester')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaign(page: Page, name: string): Promise<void> {
-  await page.getByPlaceholder('Campaign name').fill(name)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name })).toBeVisible({ timeout: 5_000 })
-}
-
-async function navigateToCampaign(page: Page, name: string): Promise<void> {
-  await page.getByRole('link', { name }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
-}
-
-async function createMap(page: Page): Promise<void> {
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  // Wait for the map to appear in the selector
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({
-    timeout: 5_000,
-  })
-}
+import { test, expect } from '@playwright/test'
+import { registerAndLogin, createCampaign, navigateToCampaign, createMap } from './helpers'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -42,7 +11,7 @@ test.describe('Map Management', () => {
   const password = 'testpassword123'
 
   test('DM can create a new map', async ({ page }) => {
-    await registerAndLogin(page, email, password)
+    await registerAndLogin(page, email, password, 'Maps Tester')
     await createCampaign(page, 'Map Creation Test')
     await navigateToCampaign(page, 'Map Creation Test')
 
@@ -65,7 +34,7 @@ test.describe('Map Management', () => {
 
   test('map appears in the selector after creation', async ({ page }) => {
     const ts = Date.now()
-    await registerAndLogin(page, `e2e-maps-list-${ts}@test.com`, password)
+    await registerAndLogin(page, `e2e-maps-list-${ts}@test.com`, password, 'Maps Tester')
     await createCampaign(page, 'Map List Test')
     await navigateToCampaign(page, 'Map List Test')
 
@@ -78,7 +47,7 @@ test.describe('Map Management', () => {
 
   test('selecting a map from the dropdown loads it into the canvas', async ({ page }) => {
     const ts = Date.now()
-    await registerAndLogin(page, `e2e-maps-select-${ts}@test.com`, password)
+    await registerAndLogin(page, `e2e-maps-select-${ts}@test.com`, password, 'Maps Tester')
     await createCampaign(page, 'Map Select Test')
     await navigateToCampaign(page, 'Map Select Test')
 
@@ -91,7 +60,7 @@ test.describe('Map Management', () => {
 
   test('Map Settings button appears when a map is selected', async ({ page }) => {
     const ts = Date.now()
-    await registerAndLogin(page, `e2e-maps-settings-btn-${ts}@test.com`, password)
+    await registerAndLogin(page, `e2e-maps-settings-btn-${ts}@test.com`, password, 'Maps Tester')
     await createCampaign(page, 'Map Settings Btn Test')
     await navigateToCampaign(page, 'Map Settings Btn Test')
 
@@ -106,7 +75,7 @@ test.describe('Map Management', () => {
 
   test('grid can be toggled on and off via Map Settings', async ({ page }) => {
     const ts = Date.now()
-    await registerAndLogin(page, `e2e-maps-grid-${ts}@test.com`, password)
+    await registerAndLogin(page, `e2e-maps-grid-${ts}@test.com`, password, 'Maps Tester')
     await createCampaign(page, 'Grid Toggle Test')
     await navigateToCampaign(page, 'Grid Toggle Test')
 
@@ -135,7 +104,7 @@ test.describe('Map Management', () => {
 
   test('grid cell size can be changed in Map Settings', async ({ page }) => {
     const ts = Date.now()
-    await registerAndLogin(page, `e2e-maps-cellsize-${ts}@test.com`, password)
+    await registerAndLogin(page, `e2e-maps-cellsize-${ts}@test.com`, password, 'Maps Tester')
     await createCampaign(page, 'Grid Cell Size Test')
     await navigateToCampaign(page, 'Grid Cell Size Test')
 
@@ -155,7 +124,7 @@ test.describe('Map Management', () => {
 
   test('multiple maps can coexist in one campaign', async ({ page }) => {
     const ts = Date.now()
-    await registerAndLogin(page, `e2e-maps-multi-${ts}@test.com`, password)
+    await registerAndLogin(page, `e2e-maps-multi-${ts}@test.com`, password, 'Maps Tester')
     await createCampaign(page, 'Multi Map Test')
     await navigateToCampaign(page, 'Multi Map Test')
 

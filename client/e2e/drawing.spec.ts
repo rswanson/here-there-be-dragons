@@ -1,28 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
+import { registerAndLogin, createCampaignAndMap } from './helpers'
 
 // ---------------------------------------------------------------------------
-// Shared helpers
+// Local helpers
 // ---------------------------------------------------------------------------
-
-async function registerAndLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill('Drawing Tester')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaignAndMap(page: Page, campaignName: string): Promise<void> {
-  await page.getByPlaceholder('Campaign name').fill(campaignName)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name: campaignName })).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('link', { name: campaignName }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({ timeout: 5_000 })
-  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 })
-}
 
 async function activateTool(page: Page, toolLabel: string): Promise<void> {
   await page.getByRole('button', { name: toolLabel }).click()
@@ -37,7 +18,7 @@ test.describe('Drawing Tools', () => {
   const password = 'testpassword123'
 
   test('all drawing tools are present in the toolbar', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-tools-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-tools-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Drawing Tools Present Test')
 
     const drawTools = ['Freehand', 'Rectangle', 'Circle', 'Polygon', 'Eraser']
@@ -49,7 +30,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('AoE tools are present in the toolbar', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-aoe-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-aoe-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'AoE Tools Present Test')
 
     const aoeTools = ['Cone', 'Cube', 'Sphere']
@@ -59,7 +40,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('selecting Freehand tool shows draw settings panel', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-settings-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-settings-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Draw Settings Test')
 
     await activateTool(page, 'Freehand')
@@ -70,7 +51,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('selecting Select tool hides draw settings panel', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-hide-settings-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-hide-settings-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Draw Settings Hide Test')
 
     // Open draw settings first
@@ -83,7 +64,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('freehand drawing on canvas does not throw errors', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-freehand-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-freehand-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Freehand Drawing Test')
 
     const errors: string[] = []
@@ -108,7 +89,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('rectangle drawing on canvas does not throw errors', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-rect-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-rect-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Rectangle Drawing Test')
 
     const errors: string[] = []
@@ -130,7 +111,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('line drawing on canvas does not throw errors', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-line-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-line-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Line Drawing Test')
 
     const errors: string[] = []
@@ -153,7 +134,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('circle drawing on canvas does not throw errors', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-circle-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-circle-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Circle Drawing Test')
 
     const errors: string[] = []
@@ -175,7 +156,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('keyboard shortcut B activates Freehand tool', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-key-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-key-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Drawing Keyboard Shortcut Test')
 
     // Press B to activate Freehand
@@ -187,7 +168,7 @@ test.describe('Drawing Tools', () => {
   })
 
   test('keyboard shortcut R activates Rectangle tool', async ({ page }) => {
-    await registerAndLogin(page, `e2e-draw-key-rect-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-draw-key-rect-${timestamp}@test.com`, password, 'Drawing Tester')
     await createCampaignAndMap(page, 'Rectangle Keyboard Shortcut Test')
 
     await page.keyboard.press('r')

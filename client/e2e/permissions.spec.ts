@@ -1,45 +1,29 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+import {
+  registerAndLogin,
+  login,
+  createCampaign,
+  navigateToCampaign,
+  createMap,
+} from './helpers'
 
 // ---------------------------------------------------------------------------
-// Shared helpers
+// Local helpers
 // ---------------------------------------------------------------------------
 
-async function register(
-  page: Page,
-  displayName: string,
-  email: string,
-  password: string,
-): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill(displayName)
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function login(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/login')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Login' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaignAndMap(page: Page, campaignName: string): Promise<{ inviteCode: string }> {
-  await page.getByPlaceholder('Campaign name').fill(campaignName)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name: campaignName })).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('link', { name: campaignName }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
+async function createCampaignAndMapWithInvite(
+  page: import('@playwright/test').Page,
+  campaignName: string,
+): Promise<{ inviteCode: string }> {
+  await createCampaign(page, campaignName)
+  await navigateToCampaign(page, campaignName)
 
   // Grab the invite code from the sidebar
   const inviteCodeText = await page.locator('p', { hasText: 'Invite code:' }).textContent()
   const inviteCode = inviteCodeText?.replace('Invite code:', '').trim() ?? ''
 
   // Create a map
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({ timeout: 5_000 })
+  await createMap(page)
 
   return { inviteCode }
 }
@@ -67,7 +51,7 @@ test.describe('Permissions & Access Control', () => {
 
   test('campaign creator can see and access their campaign', async ({ page }) => {
     const email = `e2e-perm-owner-${timestamp}@test.com`
-    await register(page, 'Campaign Owner', email, password)
+    await registerAndLogin(page, email, password, 'Campaign Owner')
 
     await page.getByPlaceholder('Campaign name').fill('Permissions Test Campaign')
     await page.getByRole('button', { name: 'Create' }).click()
@@ -84,8 +68,8 @@ test.describe('Permissions & Access Control', () => {
 
   test('invite code is displayed in campaign sidebar', async ({ page }) => {
     const email = `e2e-perm-invite-${timestamp}@test.com`
-    await register(page, 'Invite Owner', email, password)
-    await createCampaignAndMap(page, 'Invite Code Campaign')
+    await registerAndLogin(page, email, password, 'Invite Owner')
+    await createCampaignAndMapWithInvite(page, 'Invite Code Campaign')
 
     // Invite code text should be present
     const inviteText = page.locator('p', { hasText: 'Invite code:' })
@@ -96,8 +80,8 @@ test.describe('Permissions & Access Control', () => {
 
   test('DM sees all campaign controls (+ New Map, Asset Library, Map Settings)', async ({ page }) => {
     const email = `e2e-perm-dm-${timestamp}@test.com`
-    await register(page, 'DM User', email, password)
-    await createCampaignAndMap(page, 'DM Controls Test')
+    await registerAndLogin(page, email, password, 'DM User')
+    await createCampaignAndMapWithInvite(page, 'DM Controls Test')
 
     await expect(page.getByRole('button', { name: '+ New Map' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Asset Library' })).toBeVisible()
@@ -106,8 +90,8 @@ test.describe('Permissions & Access Control', () => {
 
   test('DM-only layer badge is visible to the DM', async ({ page }) => {
     const email = `e2e-perm-dmonly-badge-${timestamp}@test.com`
-    await register(page, 'DM Badge Tester', email, password)
-    await createCampaignAndMap(page, 'DM Layer Badge Test')
+    await registerAndLogin(page, email, password, 'DM Badge Tester')
+    await createCampaignAndMapWithInvite(page, 'DM Layer Badge Test')
 
     // Add a DM-only layer
     await page.getByRole('button', { name: '+ Add Layer' }).click()
@@ -129,9 +113,9 @@ test.describe('Permissions & Access Control', () => {
 
   test('registration with a duplicate email shows an error', async ({ page }) => {
     const email = `e2e-perm-dup-${timestamp}@test.com`
-    await register(page, 'First User', email, password)
+    await registerAndLogin(page, email, password, 'First User')
 
-    // Logout by navigating to register page again with a fresh context
+    // Simulate a fresh login by navigating to register page again with a fresh context
     // (Since we can't easily logout in one browser tab, we open register in same session)
     await page.goto('/register')
     await page.getByLabel('Display Name').fill('Second User')
@@ -164,7 +148,7 @@ test.describe('Permissions & Access Control', () => {
 
   test('session persists across page reloads', async ({ page }) => {
     const email = `e2e-perm-session-${timestamp}@test.com`
-    await register(page, 'Session Tester', email, password)
+    await registerAndLogin(page, email, password, 'Session Tester')
 
     // Navigate to campaigns, then reload
     await page.goto('/campaigns')
@@ -177,7 +161,7 @@ test.describe('Permissions & Access Control', () => {
   test('registered user can log in with correct credentials', async ({ page }) => {
     const email = `e2e-perm-login-${timestamp}@test.com`
     // Register first
-    await register(page, 'Login Tester', email, password)
+    await registerAndLogin(page, email, password, 'Login Tester')
 
     // Simulate a fresh login by navigating directly to the login page
     await login(page, email, password)
@@ -188,8 +172,8 @@ test.describe('Permissions & Access Control', () => {
 
   test('token bar visibility setting owner_and_dm is selectable', async ({ page }) => {
     const email = `e2e-perm-bar-vis-${timestamp}@test.com`
-    await register(page, 'Bar Vis Tester', email, password)
-    await createCampaignAndMap(page, 'Bar Visibility Test')
+    await registerAndLogin(page, email, password, 'Bar Vis Tester')
+    await createCampaignAndMapWithInvite(page, 'Bar Visibility Test')
 
     // The token inspector's bar visibility options are only relevant when a
     // token is selected. We verify the option labels are defined correctly by

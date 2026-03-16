@@ -1,28 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
+import { registerAndLogin, createCampaignAndMap } from './helpers'
 
 // ---------------------------------------------------------------------------
-// Shared helpers
+// Local helpers
 // ---------------------------------------------------------------------------
-
-async function registerAndLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill('Layers Tester')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaignAndMap(page: Page, campaignName: string): Promise<void> {
-  await page.getByPlaceholder('Campaign name').fill(campaignName)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name: campaignName })).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('link', { name: campaignName }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({ timeout: 5_000 })
-  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 })
-}
 
 async function openAddLayerForm(page: Page): Promise<void> {
   await page.getByRole('button', { name: '+ Add Layer' }).click()
@@ -38,7 +19,7 @@ test.describe('Layer Management', () => {
   const password = 'testpassword123'
 
   test('Layer panel is visible after map load', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-visible-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-visible-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Panel Visible Test')
 
     await expect(page.getByRole('heading', { name: 'Layers' })).toBeVisible({ timeout: 5_000 })
@@ -46,7 +27,7 @@ test.describe('Layer Management', () => {
   })
 
   test('DM can add a new drawing layer', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-add-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-add-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Add Layer Test')
 
     await openAddLayerForm(page)
@@ -60,7 +41,7 @@ test.describe('Layer Management', () => {
   })
 
   test('DM can add a token layer', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-token-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-token-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Token Layer Test')
 
     await openAddLayerForm(page)
@@ -73,7 +54,7 @@ test.describe('Layer Management', () => {
   })
 
   test('DM can add a DM-only layer', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-dmonly-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-dmonly-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'DM Only Layer Test')
 
     await openAddLayerForm(page)
@@ -96,7 +77,7 @@ test.describe('Layer Management', () => {
   })
 
   test('Cancel button dismisses the add layer form', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-cancel-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-cancel-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Cancel Test')
 
     await openAddLayerForm(page)
@@ -108,7 +89,7 @@ test.describe('Layer Management', () => {
   })
 
   test('layer can be toggled hidden and visible', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-toggle-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-toggle-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Toggle Test')
 
     await openAddLayerForm(page)
@@ -126,7 +107,7 @@ test.describe('Layer Management', () => {
   })
 
   test('layer can be locked and unlocked', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-lock-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-lock-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Lock Test')
 
     await openAddLayerForm(page)
@@ -144,7 +125,7 @@ test.describe('Layer Management', () => {
   })
 
   test('layer can be deleted', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-delete-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-delete-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Delete Test')
 
     await openAddLayerForm(page)
@@ -163,7 +144,7 @@ test.describe('Layer Management', () => {
   })
 
   test('clicking a layer makes it active', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-active-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-active-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Active Test')
 
     await openAddLayerForm(page)
@@ -185,7 +166,7 @@ test.describe('Layer Management', () => {
   })
 
   test('layer opacity slider is present for each layer', async ({ page }) => {
-    await registerAndLogin(page, `e2e-lay-opacity-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-lay-opacity-${timestamp}@test.com`, password, 'Layers Tester')
     await createCampaignAndMap(page, 'Layer Opacity Test')
 
     await openAddLayerForm(page)

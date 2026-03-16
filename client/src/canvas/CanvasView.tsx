@@ -44,6 +44,12 @@ export function CanvasView() {
     if (!canvas || !container) return
 
     let mounted = true
+    const subsystems: Array<{ destroy: () => void }> = []
+
+    const destroySubsystems = (app: PixiApp) => {
+      for (let i = subsystems.length - 1; i >= 0; i--) subsystems[i].destroy()
+      app.destroy()
+    }
 
     const initPixi = async () => {
       try {
@@ -72,172 +78,60 @@ export function CanvasView() {
         appRef.current = app
 
         const { TextureManager: TM } = await import('./TextureManager')
-        if (!mounted) {
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         textureManagerRef.current = new TM(app)
+        subsystems.push({ destroy: () => { textureManagerRef.current?.destroy(); textureManagerRef.current = null } })
 
         // Create the viewport after the app is ready so canvas events work
         const { Viewport } = await import('./Viewport')
-        if (!mounted) {
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         viewportRef.current = new Viewport(app)
+        subsystems.push({ destroy: () => { viewportRef.current?.destroy(); viewportRef.current = null } })
 
         const { GridRenderer } = await import('./GridRenderer')
-        if (!mounted) {
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         gridRef.current = new GridRenderer(app, viewportRef.current)
+        subsystems.push({ destroy: () => { gridRef.current?.destroy(); gridRef.current = null } })
 
         const { LayerManager } = await import('./LayerManager')
-        if (!mounted) {
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         layerManagerRef.current = new LayerManager(viewportRef.current)
+        subsystems.push({ destroy: () => { layerManagerRef.current?.destroy(); layerManagerRef.current = null } })
 
         const { TokenRenderer } = await import('./TokenRenderer')
-        if (!mounted) {
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         tokenRendererRef.current = new TokenRenderer(layerManagerRef.current)
+        subsystems.push({ destroy: () => { tokenRendererRef.current?.destroy(); tokenRendererRef.current = null } })
 
         const { TokenInteraction } = await import('./TokenInteraction')
-        if (!mounted) {
-          tokenRendererRef.current.destroy()
-          tokenRendererRef.current = null
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         tokenInteractionRef.current = new TokenInteraction(app, viewportRef.current, layerManagerRef.current)
+        subsystems.push({ destroy: () => { tokenInteractionRef.current?.destroy(); tokenInteractionRef.current = null } })
 
         const { DrawingRenderer } = await import('./DrawingRenderer')
-        if (!mounted) {
-          tokenInteractionRef.current.destroy()
-          tokenInteractionRef.current = null
-          tokenRendererRef.current.destroy()
-          tokenRendererRef.current = null
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         drawingRendererRef.current = new DrawingRenderer(layerManagerRef.current)
+        subsystems.push({ destroy: () => { drawingRendererRef.current?.destroy(); drawingRendererRef.current = null } })
 
         const { DrawingTools } = await import('./DrawingTools')
-        if (!mounted) {
-          drawingRendererRef.current.destroy()
-          drawingRendererRef.current = null
-          tokenInteractionRef.current.destroy()
-          tokenInteractionRef.current = null
-          tokenRendererRef.current.destroy()
-          tokenRendererRef.current = null
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         drawingToolsRef.current = new DrawingTools(app, viewportRef.current, layerManagerRef.current)
+        subsystems.push({ destroy: () => { drawingToolsRef.current?.destroy(); drawingToolsRef.current = null } })
 
         const { AoeTemplates } = await import('./AoeTemplates')
-        if (!mounted) {
-          drawingToolsRef.current.destroy()
-          drawingToolsRef.current = null
-          drawingRendererRef.current.destroy()
-          drawingRendererRef.current = null
-          tokenInteractionRef.current.destroy()
-          tokenInteractionRef.current = null
-          tokenRendererRef.current.destroy()
-          tokenRendererRef.current = null
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         aoeTemplatesRef.current = new AoeTemplates(app, viewportRef.current)
+        subsystems.push({ destroy: () => { aoeTemplatesRef.current?.destroy(); aoeTemplatesRef.current = null } })
 
         const { MeasurementOverlay } = await import('./MeasurementOverlay')
-        if (!mounted) {
-          aoeTemplatesRef.current.destroy()
-          aoeTemplatesRef.current = null
-          drawingToolsRef.current.destroy()
-          drawingToolsRef.current = null
-          drawingRendererRef.current.destroy()
-          drawingRendererRef.current = null
-          tokenInteractionRef.current.destroy()
-          tokenInteractionRef.current = null
-          tokenRendererRef.current.destroy()
-          tokenRendererRef.current = null
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         measurementRef.current = new MeasurementOverlay(app, viewportRef.current)
+        subsystems.push({ destroy: () => { measurementRef.current?.destroy(); measurementRef.current = null } })
 
         const { AccessibilityDOM } = await import('./AccessibilityDOM')
-        if (!mounted) {
-          measurementRef.current.destroy()
-          measurementRef.current = null
-          aoeTemplatesRef.current.destroy()
-          aoeTemplatesRef.current = null
-          drawingToolsRef.current.destroy()
-          drawingToolsRef.current = null
-          drawingRendererRef.current.destroy()
-          drawingRendererRef.current = null
-          tokenInteractionRef.current.destroy()
-          tokenInteractionRef.current = null
-          tokenRendererRef.current.destroy()
-          tokenRendererRef.current = null
-          layerManagerRef.current.destroy()
-          layerManagerRef.current = null
-          gridRef.current.destroy()
-          gridRef.current = null
-          viewportRef.current.destroy()
-          viewportRef.current = null
-          app.destroy()
-          return
-        }
+        if (!mounted) { destroySubsystems(app); return }
         accessibilityRef.current = new AccessibilityDOM(container)
+        subsystems.push({ destroy: () => { accessibilityRef.current?.destroy(); accessibilityRef.current = null } })
 
         setStatus('ready')
 
@@ -270,28 +164,7 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
-        accessibilityRef.current?.destroy()
-        accessibilityRef.current = null
-        measurementRef.current?.destroy()
-        measurementRef.current = null
-        aoeTemplatesRef.current?.destroy()
-        aoeTemplatesRef.current = null
-        drawingToolsRef.current?.destroy()
-        drawingToolsRef.current = null
-        drawingRendererRef.current?.destroy()
-        drawingRendererRef.current = null
-        tokenInteractionRef.current?.destroy()
-        tokenInteractionRef.current = null
-        tokenRendererRef.current?.destroy()
-        tokenRendererRef.current = null
-        layerManagerRef.current?.destroy()
-        layerManagerRef.current = null
-        gridRef.current?.destroy()
-        gridRef.current = null
-        viewportRef.current?.destroy()
-        viewportRef.current = null
-        textureManagerRef.current?.destroy()
-        textureManagerRef.current = null
+        for (let i = subsystems.length - 1; i >= 0; i--) subsystems[i].destroy()
         app.destroy()
       }
       appRef.current = null

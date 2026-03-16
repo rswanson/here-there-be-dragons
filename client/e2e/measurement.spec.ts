@@ -1,28 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
-
-async function registerAndLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill('Measurement Tester')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaignAndMap(page: Page, campaignName: string): Promise<void> {
-  await page.getByPlaceholder('Campaign name').fill(campaignName)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name: campaignName })).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('link', { name: campaignName }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({ timeout: 5_000 })
-  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 })
-}
+import { test, expect } from '@playwright/test'
+import { registerAndLogin, createCampaignAndMap } from './helpers'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -33,7 +10,7 @@ test.describe('Measurement Tools', () => {
   const password = 'testpassword123'
 
   test('Ruler and Waypoint tools are present in the Measure group', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-tools-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-tools-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Measurement Tools Present Test')
 
     await expect(page.getByRole('button', { name: 'Ruler' })).toBeVisible()
@@ -41,7 +18,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('keyboard shortcut M activates the Ruler tool', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-key-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-key-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Ruler Keyboard Shortcut Test')
 
     await page.keyboard.press('m')
@@ -52,7 +29,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('dragging with the Ruler tool does not throw errors', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-drag-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-drag-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Ruler Drag Test')
 
     const errors: string[] = []
@@ -76,7 +53,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('measurement overlay is accessible via aria-live region', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-aria-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-aria-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Measurement Aria Test')
 
     // The accessibility DOM includes an aria-live region for measurements
@@ -86,7 +63,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('diagonal mode D&D Standard is selectable in Map Settings', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-diag-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-diag-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Diagonal Mode Test')
 
     await page.getByRole('button', { name: /Map Settings/ }).click()
@@ -106,7 +83,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('snap mode options are selectable in Map Settings', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-snap-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-snap-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Snap Mode Test')
 
     await page.getByRole('button', { name: /Map Settings/ }).click()
@@ -126,7 +103,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('grid scale and unit can be changed in Map Settings', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-scale-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-scale-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Grid Scale Test')
 
     await page.getByRole('button', { name: /Map Settings/ }).click()
@@ -145,7 +122,7 @@ test.describe('Measurement Tools', () => {
   })
 
   test('Waypoint tool can be activated and clicked on canvas', async ({ page }) => {
-    await registerAndLogin(page, `e2e-meas-waypoint-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-meas-waypoint-${timestamp}@test.com`, password, 'Measurement Tester')
     await createCampaignAndMap(page, 'Waypoint Tool Test')
 
     const errors: string[] = []

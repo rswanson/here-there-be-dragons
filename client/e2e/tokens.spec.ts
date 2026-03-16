@@ -1,34 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
+import { registerAndLogin, createCampaignAndMap } from './helpers'
 
 // ---------------------------------------------------------------------------
-// Shared helpers
+// Local helpers
 // ---------------------------------------------------------------------------
-
-async function registerAndLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill('Tokens Tester')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaignAndMap(page: Page, campaignName: string): Promise<void> {
-  await page.getByPlaceholder('Campaign name').fill(campaignName)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name: campaignName })).toBeVisible({ timeout: 5_000 })
-  await page.getByRole('link', { name: campaignName }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
-
-  // Create a map so we have layers available
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({
-    timeout: 5_000,
-  })
-
-  // Wait for canvas to initialise
-  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 })
-}
 
 async function placeTokenViaCanvasClick(page: Page, canvasX: number, canvasY: number): Promise<void> {
   // With the Select tool active, a right-click on the canvas should
@@ -47,7 +22,7 @@ test.describe('Token Management', () => {
   const password = 'testpassword123'
 
   test('canvas renders without tokens after map load', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-empty-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-empty-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Empty Test')
 
     // Layer panel should be visible with at least default layers
@@ -58,7 +33,7 @@ test.describe('Token Management', () => {
   })
 
   test('token inspector shows Name field when token is selected', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-inspector-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-inspector-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Inspector Test')
 
     // Place a token by double-clicking the canvas
@@ -72,7 +47,7 @@ test.describe('Token Management', () => {
   })
 
   test('token inspector allows editing token name', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-name-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-name-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Name Test')
 
     // If a token inspector is open, the Name input should be editable
@@ -93,7 +68,7 @@ test.describe('Token Management', () => {
   })
 
   test('token inspector allows adding an HP bar', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-bar-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-bar-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Bar Test')
 
     const inspectorHeading = page.locator('h3', { hasText: 'Token' })
@@ -110,7 +85,7 @@ test.describe('Token Management', () => {
   })
 
   test('token inspector allows toggling condition markers', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-conditions-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-conditions-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Conditions Test')
 
     const inspectorHeading = page.locator('h3', { hasText: 'Token' })
@@ -129,7 +104,7 @@ test.describe('Token Management', () => {
   })
 
   test('token context menu appears on right-click over a token', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-ctx-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-ctx-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Context Menu Test')
 
     // Right-click on the canvas center — if a token exists there the menu should open
@@ -142,7 +117,7 @@ test.describe('Token Management', () => {
   })
 
   test('token can be deleted via the inspector Delete button', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-delete-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-delete-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Delete Test')
 
     const inspectorHeading = page.locator('h3', { hasText: 'Token' })
@@ -158,7 +133,7 @@ test.describe('Token Management', () => {
   })
 
   test('select tool is active by default', async ({ page }) => {
-    await registerAndLogin(page, `e2e-tok-tool-${timestamp}@test.com`, password)
+    await registerAndLogin(page, `e2e-tok-tool-${timestamp}@test.com`, password, 'Tokens Tester')
     await createCampaignAndMap(page, 'Token Tool Test')
 
     // The "Select" button in the Toolbar should have primary background styling,

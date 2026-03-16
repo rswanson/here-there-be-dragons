@@ -1,55 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
-
-async function registerAndLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/register')
-  await page.getByLabel('Display Name').fill('Visual Regression Tester')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Register' }).click()
-  await expect(page).toHaveURL(/\/campaigns/, { timeout: 10_000 })
-}
-
-async function createCampaign(page: Page, name: string): Promise<void> {
-  await page.getByPlaceholder('Campaign name').fill(name)
-  await page.getByRole('button', { name: 'Create' }).click()
-  await expect(page.getByRole('link', { name })).toBeVisible({ timeout: 5_000 })
-}
-
-async function navigateToCampaign(page: Page, name: string): Promise<void> {
-  await page.getByRole('link', { name }).click()
-  await expect(page).toHaveURL(/\/campaigns\//, { timeout: 5_000 })
-}
-
-async function createMap(page: Page): Promise<void> {
-  await page.getByRole('button', { name: '+ New Map' }).click()
-  await expect(page.locator('#map-selector option:not([value=""])')).toBeAttached({
-    timeout: 5_000,
-  })
-}
-
-async function waitForCanvasReady(page: Page): Promise<void> {
-  const canvas = page.locator('canvas')
-  await expect(canvas).toBeVisible({ timeout: 10_000 })
-  // Allow WebGL to finish rendering
-  await page.waitForTimeout(2000)
-}
-
-async function setupCampaignWithMap(
-  page: Page,
-  email: string,
-  password: string,
-  campaignName: string,
-): Promise<void> {
-  await registerAndLogin(page, email, password)
-  await createCampaign(page, campaignName)
-  await navigateToCampaign(page, campaignName)
-  await createMap(page)
-  await waitForCanvasReady(page)
-}
+import { test, expect } from '@playwright/test'
+import { setupCampaignWithMap } from './helpers'
 
 // ---------------------------------------------------------------------------
 // Tests
