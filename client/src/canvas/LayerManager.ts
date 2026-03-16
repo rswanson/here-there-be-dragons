@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js'
 import { useMapStore } from '../state/map'
+import type { MapLayer } from '../types/MapLayer'
 import type { Viewport } from './Viewport'
 
 export class LayerManager {
@@ -7,9 +8,18 @@ export class LayerManager {
   private containers = new Map<string, Container>()
   private unsubscribe: (() => void) | null = null
 
+  // Change detection: track previous layers array reference
+  private prevLayers: MapLayer[] = []
+
   constructor(viewport: Viewport) {
     this.viewport = viewport
-    this.unsubscribe = useMapStore.subscribe(() => this.sync())
+    this.unsubscribe = useMapStore.subscribe(() => {
+      const { layers } = useMapStore.getState()
+      if (layers !== this.prevLayers) {
+        this.prevLayers = layers
+        this.sync()
+      }
+    })
     this.sync()
   }
 

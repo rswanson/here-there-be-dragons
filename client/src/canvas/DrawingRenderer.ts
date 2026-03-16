@@ -3,19 +3,7 @@ import { useDrawingStore } from '../state/drawings'
 import type { Drawing } from '../types/Drawing'
 import type { DrawingType } from '../types/DrawingType'
 import type { LayerManager } from './LayerManager'
-
-type Point = { x: number; y: number }
-
-function parsePoints(raw: Drawing['points']): Point[] {
-  if (!Array.isArray(raw)) return []
-  return (raw as Point[]).filter(
-    (p) => typeof p?.x === 'number' && typeof p?.y === 'number',
-  )
-}
-
-function hexToNumber(hex: string): number {
-  return parseInt(hex.replace('#', ''), 16)
-}
+import { parsePoints, hexToNumber } from './utils'
 
 function renderDrawing(g: Graphics, drawing: Drawing): void {
   g.clear()
@@ -116,9 +104,18 @@ export class DrawingRenderer {
   private graphics = new Map<string, Graphics>()
   private unsubscribe: (() => void) | null = null
 
+  // Change detection: track previous drawings array reference
+  private prevDrawings: Drawing[] = []
+
   constructor(layerManager: LayerManager) {
     this.layerManager = layerManager
-    this.unsubscribe = useDrawingStore.subscribe(() => this.sync())
+    this.unsubscribe = useDrawingStore.subscribe(() => {
+      const { drawings } = useDrawingStore.getState()
+      if (drawings !== this.prevDrawings) {
+        this.prevDrawings = drawings
+        this.sync()
+      }
+    })
     this.sync()
   }
 

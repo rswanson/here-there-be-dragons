@@ -8,6 +8,9 @@ export class AccessibilityDOM {
   private unsubTokens: (() => void) | null = null
   private unsubTools: (() => void) | null = null
 
+  // Change detection: track previous tokens array reference
+  private prevTokens: unknown[] = []
+
   constructor(parent: HTMLElement) {
     this.container = document.createElement('div')
     this.container.className = 'sr-only'
@@ -24,7 +27,13 @@ export class AccessibilityDOM {
 
     parent.appendChild(this.container)
 
-    this.unsubTokens = useTokenStore.subscribe(() => this.syncTokens())
+    this.unsubTokens = useTokenStore.subscribe(() => {
+      const { tokens } = useTokenStore.getState()
+      if (tokens !== this.prevTokens) {
+        this.prevTokens = tokens
+        this.syncTokens()
+      }
+    })
     this.unsubTools = useToolStore.subscribe((state, prev) => {
       if (state.activeTool !== prev.activeTool) {
         this.announce(`Tool: ${state.activeTool} selected`)

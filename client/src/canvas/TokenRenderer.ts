@@ -4,6 +4,7 @@ import { useMapStore } from '../state/map'
 import { gridToPixel } from './math/grid'
 import type { LayerManager } from './LayerManager'
 import type { Token } from '../types/Token'
+import { getCellSize } from './utils'
 import type { TokenBar } from '../types/TokenBar'
 
 // Deterministic colour from a string (used as placeholder circle colour).
@@ -88,18 +89,35 @@ export class TokenRenderer {
   private unsubTokens: (() => void) | null = null
   private unsubMap: (() => void) | null = null
 
+  // Change detection: track previous state to skip redundant syncs
+  private prevTokens: Token[] = []
+  private prevSelectedIds: string[] = []
+  private prevGridSize = 0
+
   constructor(layerManager: LayerManager) {
     this.layerManager = layerManager
-    this.unsubTokens = useTokenStore.subscribe(() => this.sync())
-    this.unsubMap = useMapStore.subscribe(() => this.sync())
+    this.unsubTokens = useTokenStore.subscribe(() => {
+      const { tokens, selectedIds } = useTokenStore.getState()
+      if (tokens !== this.prevTokens || selectedIds !== this.prevSelectedIds) {
+        this.prevTokens = tokens
+        this.prevSelectedIds = selectedIds
+        this.sync()
+      }
+    })
+    this.unsubMap = useMapStore.subscribe(() => {
+      const gridSize = getCellSize()
+      if (gridSize !== this.prevGridSize) {
+        this.prevGridSize = gridSize
+        this.sync()
+      }
+    })
     this.sync()
   }
 
   private sync(): void {
     const tokens = useTokenStore.getState().tokens
     const selectedIds = useTokenStore.getState().selectedIds
-    const map = useMapStore.getState().currentMap
-    const gridSize = map?.grid_size_px ?? 70
+    const gridSize = getCellSize()
 
     // Remove containers for tokens that no longer exist
     const currentIds = new Set(tokens.map((t) => t.id))
