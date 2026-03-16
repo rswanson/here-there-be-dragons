@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE drawings SET\n            points_json = COALESCE($2, points_json),\n            stroke_color = COALESCE($3, stroke_color),\n            stroke_width = COALESCE($4, stroke_width),\n            stroke_opacity = COALESCE($5, stroke_opacity),\n            fill_color = CASE WHEN $6 THEN $7 ELSE fill_color END,\n            fill_opacity = COALESCE($8, fill_opacity)\n        WHERE id = $1\n        RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "layer_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "drawing_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "points_json",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "stroke_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "stroke_width",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "stroke_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "fill_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "fill_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Text",
+        "Float4",
+        "Float4",
+        "Bool",
+        "Text",
+        "Float4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "62b27d914f8677c9a0f269fd79b763b70e9eaebf0ffd1ad28ad901d02a367915"
+}
