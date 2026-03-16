@@ -132,6 +132,28 @@ function distToSegment(
 }
 
 // ---------------------------------------------------------------------------
+// Throttle utility — calls fn at most once per `ms` milliseconds.
+// A trailing call is always scheduled so the final position is captured.
+// ---------------------------------------------------------------------------
+function throttle<T extends (...args: Parameters<T>) => void>(fn: T, ms: number): T {
+  let lastCall = 0
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return ((...args: Parameters<T>) => {
+    const now = Date.now()
+    if (now - lastCall >= ms) {
+      lastCall = now
+      fn(...args)
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        lastCall = Date.now()
+        timer = null
+        fn(...args)
+      }, ms - (now - lastCall))
+    }
+  }) as T
+}
+
+// ---------------------------------------------------------------------------
 // DrawingTools class — event-driven tool state machine
 // ---------------------------------------------------------------------------
 
@@ -169,10 +191,18 @@ export class DrawingTools {
   private readonly onMouseUp: (e: MouseEvent) => void
   private readonly onDblClick: (e: MouseEvent) => void
 
+  // Throttled freehand point collector — ~30 Hz
+  private readonly throttledFreehandMove: (world: Point) => void
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(app: Application, viewport: Viewport, _layerManager: LayerManager) {
     this.app = app
     this.viewport = viewport
+
+    this.throttledFreehandMove = throttle((world: Point) => {
+      this.freehandPoints.push(world)
+      this.renderFreehandPreview()
+    }, 33) // ~30 Hz
 
     this.onMouseDown = this.handleMouseDown.bind(this)
     this.onMouseMove = this.handleMouseMove.bind(this)
@@ -291,8 +321,7 @@ export class DrawingTools {
     const world = this.screenToWorld(e)
 
     if (tool === 'freehand' && this.freehandPoints.length > 0) {
-      this.freehandPoints.push(world)
-      this.renderFreehandPreview()
+      this.throttledFreehandMove(world)
     } else if (
       (tool === 'line' || tool === 'rectangle' || tool === 'circle') &&
       this.shapeStart

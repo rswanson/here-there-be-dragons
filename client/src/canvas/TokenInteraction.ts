@@ -57,6 +57,28 @@ export function getTokensInRect(tokens: Token[], rect: SelectionRect, gridSize: 
   })
 }
 
+// ---------------------------------------------------------------------------
+// Throttle utility — only calls fn at most once per `ms` milliseconds.
+// A trailing call is always scheduled so the final position is committed.
+// ---------------------------------------------------------------------------
+function throttle<T extends (...args: Parameters<T>) => void>(fn: T, ms: number): T {
+  let lastCall = 0
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return ((...args: Parameters<T>) => {
+    const now = Date.now()
+    if (now - lastCall >= ms) {
+      lastCall = now
+      fn(...args)
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        lastCall = Date.now()
+        timer = null
+        fn(...args)
+      }, ms - (now - lastCall))
+    }
+  }) as T
+}
+
 interface DragState {
   tokenId: string
   startWorldX: number
@@ -81,6 +103,9 @@ export class TokenInteraction {
   private dragState: DragState | null = null
   private boxState: BoxSelectState | null = null
 
+  // Throttled store commit — ~30 Hz during drag
+  private readonly throttledMoveToken: (id: string, x: number, y: number) => void
+
   // Bound handlers for cleanup
   private readonly onMouseDown: (e: MouseEvent) => void
   private readonly onMouseMove: (e: MouseEvent) => void
@@ -91,6 +116,13 @@ export class TokenInteraction {
   constructor(app: Application, viewport: Viewport, _layerManager: LayerManager) {
     this.app = app
     this.viewport = viewport
+
+    this.throttledMoveToken = throttle(
+      (id: string, x: number, y: number) => {
+        useTokenStore.getState().moveToken(id, x, y)
+      },
+      33, // ~30 Hz
+    )
 
     this.onMouseDown = this.handleMouseDown.bind(this)
     this.onMouseMove = this.handleMouseMove.bind(this)
@@ -195,7 +227,7 @@ export class TokenInteraction {
       const newGridX = Math.round(snapped.x / gridSize)
       const newGridY = Math.round(snapped.y / gridSize)
 
-      useTokenStore.getState().moveToken(this.dragState.tokenId, newGridX, newGridY)
+      this.throttledMoveToken(this.dragState.tokenId, newGridX, newGridY)
     }
 
     if (this.boxState) {

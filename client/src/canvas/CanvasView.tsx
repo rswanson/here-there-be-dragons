@@ -10,6 +10,7 @@ import type { DrawingRenderer } from './DrawingRenderer'
 import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
+import type { TextureManager } from './TextureManager'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -32,6 +33,7 @@ export function CanvasView() {
   const drawingToolsRef = useRef<DrawingTools | null>(null)
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const measurementRef = useRef<MeasurementOverlay | null>(null)
+  const textureManagerRef = useRef<TextureManager | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -66,6 +68,13 @@ export function CanvasView() {
         }
 
         appRef.current = app
+
+        const { TextureManager: TM } = await import('./TextureManager')
+        if (!mounted) {
+          app.destroy()
+          return
+        }
+        textureManagerRef.current = new TM(app)
 
         // Create the viewport after the app is ready so canvas events work
         const { Viewport } = await import('./Viewport')
@@ -252,6 +261,8 @@ export function CanvasView() {
         gridRef.current = null
         viewportRef.current?.destroy()
         viewportRef.current = null
+        textureManagerRef.current?.destroy()
+        textureManagerRef.current = null
         app.destroy()
       }
       appRef.current = null
