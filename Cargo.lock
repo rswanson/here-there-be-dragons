@@ -492,6 +492,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "htbd-core",
+ "serde_json",
  "sqlx",
  "thiserror 2.0.18",
  "tracing",

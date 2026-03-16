@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM map_layers WHERE map_id = $1 AND dm_only = false ORDER BY sort_order ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "map_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "layer_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "sort_order",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "locked",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 8,
+        "name": "dm_only",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "87c7f93f62bce18a03db95fea4d592e26191a0c585265106cd6f3495187881c0"
+}
