@@ -43,14 +43,16 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace -- -D warnings
 
-      - name: Run tests
-        run: cargo test --workspace
-
       - name: Install sqlx-cli
         run: cargo install sqlx-cli --no-default-features --features postgres
 
       - name: Run migrations
         run: cargo sqlx migrate run --source migrations
+        env:
+          DATABASE_URL: postgres://dragons:dragons@localhost:5432/dragons
+
+      - name: Run tests
+        run: cargo test --workspace
         env:
           DATABASE_URL: postgres://dragons:dragons@localhost:5432/dragons
 
