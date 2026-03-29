@@ -1,5 +1,6 @@
 .superpowers/
-.worktrees/
+.claude/.worktrees
+.worktrees
 target/
 node_modules/
 .env
