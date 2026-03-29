@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 use server::config::Config;
+use server::session::{InMemoryBroadcaster, SessionManager};
 use server::state::AppState;
 
 #[tokio::main]
@@ -23,10 +24,25 @@ async fn main() {
 
     let storage = asset_store::create_storage(config.asset_storage_path.clone());
 
+    let session_manager = Arc::new(SessionManager::new(Arc::new(InMemoryBroadcaster::new())));
+
+    // Spawn idle session cleanup task (runs every 30 seconds)
+    {
+        let sm = Arc::clone(&session_manager);
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                interval.tick().await;
+                sm.cleanup_idle().await;
+            }
+        });
+    }
+
     let state = AppState {
         pool,
         config: config.clone(),
         storage: Arc::from(storage),
+        session_manager,
     };
 
     let client_dir = std::env::var("CLIENT_DIR").unwrap_or_else(|_| "/srv/client".to_string());

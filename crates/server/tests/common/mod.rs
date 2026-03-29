@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use reqwest::Client;
 use server::config::Config;
+use server::session::{InMemoryBroadcaster, SessionManager};
 use server::state::AppState;
 use sqlx::PgPool;
 use tempfile::TempDir;
@@ -91,10 +92,13 @@ pub async fn spawn_app() -> TestApp {
 
     let storage = asset_store::create_storage(config.asset_storage_path.clone());
 
+    let session_manager = Arc::new(SessionManager::new(Arc::new(InMemoryBroadcaster::new())));
+
     let state = AppState {
         pool: pool.clone(),
         config,
         storage: Arc::from(storage),
+        session_manager,
     };
 
     let app = server::build_app(state);

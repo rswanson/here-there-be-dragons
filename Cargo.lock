@@ -2291,6 +2291,7 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "asset-store",
+ "async-trait",
  "axum",
  "axum-extra",
  "chrono",
