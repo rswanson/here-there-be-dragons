@@ -15,8 +15,6 @@ const SESSION_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// A live session for a campaign, tracking all active connections.
 struct Session {
-    #[allow(dead_code)] // Will be used when sessions need campaign context
-    campaign_id: Uuid,
     /// Multiple connections per user (multi-tab support).
     connections: HashMap<Uuid, Vec<ConnectionHandle>>,
     /// Cached role per user.
@@ -26,9 +24,8 @@ struct Session {
 }
 
 impl Session {
-    fn new(campaign_id: Uuid) -> Self {
+    fn new() -> Self {
         Self {
-            campaign_id,
             connections: HashMap::new(),
             roles: HashMap::new(),
             last_activity: Instant::now(),
@@ -71,9 +68,7 @@ impl SessionManager {
         let role = conn.role;
 
         let mut sessions = self.sessions.write().await;
-        let session = sessions
-            .entry(campaign_id)
-            .or_insert_with(|| Session::new(campaign_id));
+        let session = sessions.entry(campaign_id).or_insert_with(Session::new);
         session.touch();
 
         let is_first_connection =

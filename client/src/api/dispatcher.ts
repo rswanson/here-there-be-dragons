@@ -69,10 +69,27 @@ export function createMessageDispatcher(): (msg: ServerMessage) => void {
         break;
       }
 
+      // Layer messages
+      case 'LayerCreated': {
+        useMapStore.getState().addLayer(msg.payload.layer);
+        break;
+      }
+      case 'LayerUpdated': {
+        useMapStore.getState().updateLayer(msg.payload.layer.id, msg.payload.layer);
+        break;
+      }
+      case 'LayerDeleted': {
+        useMapStore.getState().removeLayer(msg.payload.layer_id);
+        break;
+      }
+      case 'LayersReordered': {
+        useMapStore.getState().reorderLayers(msg.payload.layer_ids);
+        break;
+      }
+
       // No-op messages (handled elsewhere or not yet implemented)
       case 'Pong':
       case 'Error':
-      case 'LayerUpdated':
       case 'MapImagePlaced':
       case 'MapImageUpdated':
       case 'MapImageDeleted':

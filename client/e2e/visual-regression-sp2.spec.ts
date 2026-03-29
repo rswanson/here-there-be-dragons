@@ -67,7 +67,7 @@ test.describe('Visual Regression SP-2', () => {
     await page.waitForTimeout(3000)
 
     // The ConnectionStatus component shows "Connected" with a green dot
-    const connectedText = page.getByText('Connected')
+    const connectedText = page.getByText('Connected', { exact: true })
     await expect(connectedText).toBeVisible({ timeout: 10_000 })
 
     // Screenshot the header area containing the connection status

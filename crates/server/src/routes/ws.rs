@@ -131,7 +131,10 @@ async fn handle_socket(
         }
     }
 
-    // Disconnect cleanup
+    // Disconnect cleanup: leave() broadcasts UserLeft to remaining connections,
+    // then abort() kills this connection's send task. The UserLeft message queued
+    // to this connection's own tx channel is intentionally dropped — a client
+    // doesn't need to hear that it left.
     state
         .session_manager
         .leave(campaign_id, user_id, connection_id)
@@ -157,7 +160,9 @@ async fn handle_client_message(
         ClientMessage::MoveToken { token_id, x, y } => {
             handle_move_token(state, campaign_id, user_id, role, token_id, x, y).await;
         }
-        // All other message types are handled through REST endpoints
+        // CRUD messages (CreateToken, DeleteDrawing, etc.) are handled via REST.
+        // JoinSession, LeaveSession, RequestFullState are WS-native but not yet
+        // implemented — session join/leave is managed at connection level for now.
         _ => {}
     }
 }

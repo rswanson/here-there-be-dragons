@@ -29,7 +29,9 @@ export const useTokenStore = create<TokenState>()((set) => ({
 
   addToken: (token) =>
     set((s) => ({
-      tokens: [...s.tokens, token],
+      tokens: s.tokens.some((t) => t.id === token.id)
+        ? s.tokens
+        : [...s.tokens, token],
     })),
 
   removeToken: (tokenId) =>

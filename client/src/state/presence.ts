@@ -34,14 +34,20 @@ export const usePresenceStore = create<PresenceState>()((set) => ({
         break;
       case 'UserJoined':
         set((s) => ({
-          connectedUsers: [
-            ...s.connectedUsers,
-            {
-              user_id: msg.payload.user_id,
-              display_name: msg.payload.display_name,
-              role: 'player',
-            },
-          ],
+          connectedUsers: s.connectedUsers.some(
+            (u) => u.user_id === msg.payload.user_id,
+          )
+            ? s.connectedUsers
+            : [
+                ...s.connectedUsers,
+                {
+                  user_id: msg.payload.user_id,
+                  display_name: msg.payload.display_name,
+                  // UserJoined doesn't carry role; SessionJoined provides accurate roles.
+                  // Use 'unknown' to avoid misrepresenting DMs as players.
+                  role: 'unknown',
+                },
+              ],
         }));
         break;
       case 'UserLeft':
