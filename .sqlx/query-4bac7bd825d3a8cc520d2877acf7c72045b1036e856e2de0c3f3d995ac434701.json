@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT d.id, d.layer_id, d.drawing_type, d.points_json,\n                  d.stroke_color, d.stroke_width, d.stroke_opacity,\n                  d.fill_color, d.fill_opacity, d.created_at\n           FROM drawings d\n           JOIN map_layers l ON d.layer_id = l.id\n           WHERE l.map_id = $1 AND l.dm_only = false\n           ORDER BY d.created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "layer_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "drawing_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "points_json",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "stroke_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "stroke_width",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "stroke_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "fill_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "fill_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "4bac7bd825d3a8cc520d2877acf7c72045b1036e856e2de0c3f3d995ac434701"
+}
