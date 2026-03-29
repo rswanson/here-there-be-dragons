@@ -17,7 +17,7 @@ pub fn api_routes() -> Router<AppState> {
         .nest("/auth", auth::routes())
         .nest("/campaigns", campaigns::routes())
         .nest("/assets", assets::routes())
-        .nest("/ws", ws::routes())
+        .route("/ws/{campaign_id}", axum::routing::get(ws::ws_upgrade))
         .merge(maps::routes())
         .merge(layers::routes())
         .merge(map_images::routes())
