@@ -100,7 +100,7 @@ export function CanvasView() {
 
         const { TokenRenderer } = await import('./TokenRenderer')
         if (!mounted) { destroySubsystems(app); return }
-        tokenRendererRef.current = new TokenRenderer(layerManagerRef.current)
+        tokenRendererRef.current = new TokenRenderer(layerManagerRef.current, textureManagerRef.current!)
         subsystems.push({ destroy: () => { tokenRendererRef.current?.destroy(); tokenRendererRef.current = null } })
 
         const { TokenInteraction } = await import('./TokenInteraction')

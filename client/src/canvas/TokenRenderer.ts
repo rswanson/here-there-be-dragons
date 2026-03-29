@@ -1,8 +1,9 @@
-import { Container, Graphics, Text, TextStyle } from 'pixi.js'
+import { Container, Graphics, Sprite, Text, TextStyle, type Texture } from 'pixi.js'
 import { useTokenStore } from '../state/tokens'
 import { useMapStore } from '../state/map'
 import { gridToPixel } from './math/grid'
 import type { LayerManager } from './LayerManager'
+import type { TextureManager } from './TextureManager'
 import type { Token } from '../types/Token'
 import { getCellSize } from './utils'
 import type { TokenBar } from '../types/TokenBar'
@@ -26,38 +27,62 @@ function drawToken(
   token: Token,
   gridSize: number,
   selected: boolean,
+  texture: Texture | null = null,
 ): void {
   container.removeChildren()
 
   const size = token.size * gridSize
   const radius = size / 2
 
-  // ---- Circle body ----
-  const circle = new Graphics()
-  const colour = tokenColour(token.id)
-  circle.circle(radius, radius, radius - 1)
-  circle.fill({ color: colour, alpha: 1 })
+  if (texture) {
+    // ---- Asset image sprite (circular clip via mask) ----
+    const sprite = new Sprite(texture)
+    sprite.width = size
+    sprite.height = size
+    container.addChild(sprite)
 
-  // ---- Selection ring ----
-  if (selected) {
+    // Circular mask to clip the sprite into a token shape
+    const mask = new Graphics()
+    mask.circle(radius, radius, radius - 1)
+    mask.fill({ color: 0xffffff })
+    container.addChild(mask)
+    sprite.mask = mask
+
+    // ---- Selection ring ----
+    if (selected) {
+      const ring = new Graphics()
+      ring.circle(radius, radius, radius - 1)
+      ring.stroke({ color: SELECTION_COLOUR, alpha: SELECTION_ALPHA, width: 3 })
+      container.addChild(ring)
+    }
+  } else {
+    // ---- Fallback: Circle body ----
+    const circle = new Graphics()
+    const colour = tokenColour(token.id)
     circle.circle(radius, radius, radius - 1)
-    circle.stroke({ color: SELECTION_COLOUR, alpha: SELECTION_ALPHA, width: 3 })
+    circle.fill({ color: colour, alpha: 1 })
+
+    // ---- Selection ring ----
+    if (selected) {
+      circle.circle(radius, radius, radius - 1)
+      circle.stroke({ color: SELECTION_COLOUR, alpha: SELECTION_ALPHA, width: 3 })
+    }
+
+    container.addChild(circle)
+
+    // ---- Initial label ----
+    const initial = (token.name ?? '?').charAt(0).toUpperCase()
+    const labelStyle = new TextStyle({
+      fill: 0xffffff,
+      fontSize: Math.max(12, Math.round(radius * 0.8)),
+      fontWeight: 'bold',
+      align: 'center',
+    })
+    const label = new Text({ text: initial, style: labelStyle })
+    label.anchor.set(0.5, 0.5)
+    label.position.set(radius, radius)
+    container.addChild(label)
   }
-
-  container.addChild(circle)
-
-  // ---- Initial label ----
-  const initial = (token.name ?? '?').charAt(0).toUpperCase()
-  const labelStyle = new TextStyle({
-    fill: 0xffffff,
-    fontSize: Math.max(12, Math.round(radius * 0.8)),
-    fontWeight: 'bold',
-    align: 'center',
-  })
-  const label = new Text({ text: initial, style: labelStyle })
-  label.anchor.set(0.5, 0.5)
-  label.position.set(radius, radius)
-  container.addChild(label)
 
   // ---- HP / resource bars ----
   if (token.bars && token.bars.length > 0) {
@@ -85,7 +110,9 @@ function drawToken(
 
 export class TokenRenderer {
   private layerManager: LayerManager
+  private textureManager: TextureManager | null
   private tokenContainers = new Map<string, Container>()
+  private tokenTextures = new Map<string, Texture | null>()
   private unsubTokens: (() => void) | null = null
   private unsubMap: (() => void) | null = null
 
@@ -94,8 +121,9 @@ export class TokenRenderer {
   private prevSelectedIds: string[] = []
   private prevGridSize = 0
 
-  constructor(layerManager: LayerManager) {
+  constructor(layerManager: LayerManager, textureManager?: TextureManager) {
     this.layerManager = layerManager
+    this.textureManager = textureManager ?? null
     this.unsubTokens = useTokenStore.subscribe(() => {
       const { tokens, selectedIds } = useTokenStore.getState()
       if (tokens !== this.prevTokens || selectedIds !== this.prevSelectedIds) {
@@ -142,9 +170,24 @@ export class TokenRenderer {
       container.position.set(pixel.x, pixel.y)
       container.rotation = (token.rotation ?? 0) * (Math.PI / 180)
 
+      // Load asset texture if available (async, renders placeholder until loaded)
+      const assetUrl = token.asset_id ? `/api/assets/${token.asset_id}` : null
+      if (assetUrl && !this.tokenTextures.has(token.id) && this.textureManager) {
+        // Mark as loading (null) so we don't kick off duplicate loads
+        this.tokenTextures.set(token.id, null)
+        this.textureManager.acquire(assetUrl).then((tex) => {
+          this.tokenTextures.set(token.id, tex)
+          this.sync() // re-render with loaded texture
+        }).catch(() => {
+          // Failed to load — keep fallback circle
+          this.tokenTextures.delete(token.id)
+        })
+      }
+
       // Redraw visuals
       const isSelected = selectedIds.includes(token.id)
-      drawToken(container, token, gridSize, isSelected)
+      const texture = this.tokenTextures.get(token.id) ?? null
+      drawToken(container, token, gridSize, isSelected, texture)
 
       // Attach to the correct layer container
       const layerContainer = this.layerManager.getContainer(token.layer_id)
@@ -163,5 +206,15 @@ export class TokenRenderer {
       container.destroy({ children: true })
     }
     this.tokenContainers.clear()
+    // Release loaded textures
+    if (this.textureManager) {
+      for (const [tokenId] of this.tokenTextures) {
+        const token = this.prevTokens.find((t) => t.id === tokenId)
+        if (token?.asset_id) {
+          this.textureManager.release(`/api/assets/${token.asset_id}`)
+        }
+      }
+    }
+    this.tokenTextures.clear()
   }
 }
