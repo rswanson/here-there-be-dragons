@@ -37,6 +37,9 @@ async fn handle_socket(mut socket: WebSocket, _user_id: uuid::Uuid) {
                             break;
                         }
                     }
+                    Ok(_) => {
+                        // Other message types will be handled in future tasks
+                    }
                     Err(e) => {
                         let error = ServerMessage::Error {
                             code: "INVALID_MESSAGE".to_string(),

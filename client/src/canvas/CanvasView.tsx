@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Application, Sprite } from 'pixi.js'
 import { useUiStore } from '../state/ui'
+import type { Viewport } from './Viewport'
+import type { GridRenderer } from './GridRenderer'
+import type { LayerManager } from './LayerManager'
+import type { TokenRenderer } from './TokenRenderer'
+import type { TokenInteraction } from './TokenInteraction'
+import type { DrawingRenderer } from './DrawingRenderer'
+import type { DrawingTools } from './DrawingTools'
+import type { AoeTemplates } from './AoeTemplates'
+import type { MeasurementOverlay } from './MeasurementOverlay'
+import type { TextureManager } from './TextureManager'
+import type { AccessibilityDOM } from './AccessibilityDOM'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
 
@@ -14,6 +25,17 @@ export function CanvasView() {
   const appRef = useRef<PixiApp | null>(null)
   const spriteRef = useRef<Sprite | null>(null)
   const pixiRef = useRef<typeof import('pixi.js') | null>(null)
+  const viewportRef = useRef<Viewport | null>(null)
+  const gridRef = useRef<GridRenderer | null>(null)
+  const layerManagerRef = useRef<LayerManager | null>(null)
+  const tokenRendererRef = useRef<TokenRenderer | null>(null)
+  const tokenInteractionRef = useRef<TokenInteraction | null>(null)
+  const drawingRendererRef = useRef<DrawingRenderer | null>(null)
+  const drawingToolsRef = useRef<DrawingTools | null>(null)
+  const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
+  const measurementRef = useRef<MeasurementOverlay | null>(null)
+  const textureManagerRef = useRef<TextureManager | null>(null)
+  const accessibilityRef = useRef<AccessibilityDOM | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
@@ -22,6 +44,12 @@ export function CanvasView() {
     if (!canvas || !container) return
 
     let mounted = true
+    const subsystems: Array<{ destroy: () => void }> = []
+
+    const destroySubsystems = (app: PixiApp) => {
+      for (let i = subsystems.length - 1; i >= 0; i--) subsystems[i].destroy()
+      app.destroy()
+    }
 
     const initPixi = async () => {
       try {
@@ -48,6 +76,63 @@ export function CanvasView() {
         }
 
         appRef.current = app
+
+        const { TextureManager: TM } = await import('./TextureManager')
+        if (!mounted) { destroySubsystems(app); return }
+        textureManagerRef.current = new TM(app)
+        subsystems.push({ destroy: () => { textureManagerRef.current?.destroy(); textureManagerRef.current = null } })
+
+        // Create the viewport after the app is ready so canvas events work
+        const { Viewport } = await import('./Viewport')
+        if (!mounted) { destroySubsystems(app); return }
+        viewportRef.current = new Viewport(app)
+        subsystems.push({ destroy: () => { viewportRef.current?.destroy(); viewportRef.current = null } })
+
+        const { GridRenderer } = await import('./GridRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        gridRef.current = new GridRenderer(app, viewportRef.current)
+        subsystems.push({ destroy: () => { gridRef.current?.destroy(); gridRef.current = null } })
+
+        const { LayerManager } = await import('./LayerManager')
+        if (!mounted) { destroySubsystems(app); return }
+        layerManagerRef.current = new LayerManager(viewportRef.current)
+        subsystems.push({ destroy: () => { layerManagerRef.current?.destroy(); layerManagerRef.current = null } })
+
+        const { TokenRenderer } = await import('./TokenRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        tokenRendererRef.current = new TokenRenderer(layerManagerRef.current, textureManagerRef.current!)
+        subsystems.push({ destroy: () => { tokenRendererRef.current?.destroy(); tokenRendererRef.current = null } })
+
+        const { TokenInteraction } = await import('./TokenInteraction')
+        if (!mounted) { destroySubsystems(app); return }
+        tokenInteractionRef.current = new TokenInteraction(app, viewportRef.current, layerManagerRef.current)
+        subsystems.push({ destroy: () => { tokenInteractionRef.current?.destroy(); tokenInteractionRef.current = null } })
+
+        const { DrawingRenderer } = await import('./DrawingRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        drawingRendererRef.current = new DrawingRenderer(layerManagerRef.current)
+        subsystems.push({ destroy: () => { drawingRendererRef.current?.destroy(); drawingRendererRef.current = null } })
+
+        const { DrawingTools } = await import('./DrawingTools')
+        if (!mounted) { destroySubsystems(app); return }
+        drawingToolsRef.current = new DrawingTools(app, viewportRef.current, layerManagerRef.current)
+        subsystems.push({ destroy: () => { drawingToolsRef.current?.destroy(); drawingToolsRef.current = null } })
+
+        const { AoeTemplates } = await import('./AoeTemplates')
+        if (!mounted) { destroySubsystems(app); return }
+        aoeTemplatesRef.current = new AoeTemplates(app, viewportRef.current)
+        subsystems.push({ destroy: () => { aoeTemplatesRef.current?.destroy(); aoeTemplatesRef.current = null } })
+
+        const { MeasurementOverlay } = await import('./MeasurementOverlay')
+        if (!mounted) { destroySubsystems(app); return }
+        measurementRef.current = new MeasurementOverlay(app, viewportRef.current)
+        subsystems.push({ destroy: () => { measurementRef.current?.destroy(); measurementRef.current = null } })
+
+        const { AccessibilityDOM } = await import('./AccessibilityDOM')
+        if (!mounted) { destroySubsystems(app); return }
+        accessibilityRef.current = new AccessibilityDOM(container)
+        subsystems.push({ destroy: () => { accessibilityRef.current?.destroy(); accessibilityRef.current = null } })
+
         setStatus('ready')
 
         const observer = new ResizeObserver((entries) => {
@@ -79,6 +164,7 @@ export function CanvasView() {
       const app = appRef.current
       if (app) {
         app._resizeObserver?.disconnect()
+        for (let i = subsystems.length - 1; i >= 0; i--) subsystems[i].destroy()
         app.destroy()
       }
       appRef.current = null
@@ -96,10 +182,11 @@ export function CanvasView() {
 
     const loadMap = async () => {
       const app = appRef.current
-      if (!app || cancelled) return
+      const viewport = viewportRef.current
+      if (!app || !viewport || cancelled) return
 
       if (spriteRef.current) {
-        app.stage.removeChild(spriteRef.current)
+        viewport.container.removeChild(spriteRef.current)
         spriteRef.current.destroy()
         spriteRef.current = null
       }
@@ -116,16 +203,12 @@ export function CanvasView() {
           img.onload = () => resolve()
           img.onerror = () => reject(new Error(`Failed to load image: ${mapAssetUrl}`))
         })
-        if (cancelled || !appRef.current) return
+        if (cancelled || !appRef.current || !viewportRef.current) return
         const texture = PIXI.Texture.from(img)
         const sprite = new PIXI.Sprite(texture)
-        const scaleX = app.screen.width / sprite.width
-        const scaleY = app.screen.height / sprite.height
-        const scale = Math.min(scaleX, scaleY)
-        sprite.scale.set(scale)
-        sprite.x = (app.screen.width - sprite.width) / 2
-        sprite.y = (app.screen.height - sprite.height) / 2
-        app.stage.addChild(sprite)
+        // Fit the map to the screen and use fitToRect for a proper viewport fit
+        viewportRef.current.fitToRect(sprite.width, sprite.height)
+        viewportRef.current.container.addChild(sprite)
         spriteRef.current = sprite
       } catch (err) {
         console.error('Failed to load map asset:', err)
@@ -169,6 +252,7 @@ export function CanvasView() {
         aria-roledescription="virtual tabletop"
         className="sr-only"
         tabIndex={0}
+        aria-live="polite"
       >
         <p>{mapAssetUrl ? 'Map loaded on canvas.' : 'Empty canvas. Grid and tokens will appear here when a map is loaded.'}</p>
       </div>

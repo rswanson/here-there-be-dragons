@@ -1,0 +1,129 @@
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    http::StatusCode,
+    routing::post,
+};
+use uuid::Uuid;
+
+use crate::error::AppError;
+use crate::middleware::auth::AuthUser;
+use crate::state::AppState;
+use htbd_core::models::CampaignRole;
+use htbd_core::token::*;
+
+use super::guards::{require_dm, require_member};
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/layers/{layer_id}/tokens", post(create_token))
+        .route(
+            "/tokens/{id}",
+            axum::routing::patch(update_token).delete(delete_token),
+        )
+}
+
+/// Resolve layer_id → map_id → campaign_id
+async fn get_campaign_for_layer(state: &AppState, layer_id: &Uuid) -> Result<Uuid, AppError> {
+    let map_id = db::map_layers::get_map_id_for_layer(&state.pool, layer_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let map_row = db::maps::find_by_id(&state.pool, &map_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    Ok(map_row.campaign_id)
+}
+
+async fn create_token(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(layer_id): Path<Uuid>,
+    Json(req): Json<CreateTokenRequest>,
+) -> Result<Json<Token>, AppError> {
+    let campaign_id = get_campaign_for_layer(&state, &layer_id).await?;
+    require_dm(&state, campaign_id, auth.user_id).await?;
+
+    if req.name.is_empty() {
+        return Err(AppError::BadRequest("Token name required".to_string()));
+    }
+
+    let bars_json = serde_json::to_value(&req.bars).unwrap_or_default();
+
+    let row = db::tokens::create_token(
+        &state.pool,
+        &layer_id,
+        &req.name,
+        req.asset_id.as_ref(),
+        req.owner_id.as_ref(),
+        req.x,
+        req.y,
+        req.size,
+        req.rotation,
+        &bars_json,
+        &req.status_markers,
+    )
+    .await?;
+
+    Ok(Json(row.into()))
+}
+
+async fn update_token(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateTokenRequest>,
+) -> Result<Json<Token>, AppError> {
+    let (layer_id, owner_id) = db::tokens::get_token_auth_info(&state.pool, &id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let campaign_id = get_campaign_for_layer(&state, &layer_id).await?;
+    let role = require_member(&state, campaign_id, auth.user_id).await?;
+
+    // Players can only update tokens they own
+    if role != CampaignRole::Dm {
+        match owner_id {
+            Some(oid) if oid == auth.user_id => {}
+            _ => return Err(AppError::Forbidden),
+        }
+    }
+
+    let bars_json = req
+        .bars
+        .as_ref()
+        .map(|b| serde_json::to_value(b).unwrap_or_default());
+
+    let updated = db::tokens::update_token(
+        &state.pool,
+        &id,
+        req.name.as_deref(),
+        req.asset_id.as_ref().map(|a| a.as_ref()),
+        req.owner_id.as_ref().map(|o| o.as_ref()),
+        req.x,
+        req.y,
+        req.size,
+        req.rotation,
+        bars_json.as_ref(),
+        req.status_markers.as_deref(),
+    )
+    .await?
+    .ok_or(AppError::NotFound)?;
+
+    Ok(Json(updated.into()))
+}
+
+async fn delete_token(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    let (layer_id, _) = db::tokens::get_token_auth_info(&state.pool, &id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let campaign_id = get_campaign_for_layer(&state, &layer_id).await?;
+    require_dm(&state, campaign_id, auth.user_id).await?;
+
+    db::tokens::delete_token(&state.pool, &id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}

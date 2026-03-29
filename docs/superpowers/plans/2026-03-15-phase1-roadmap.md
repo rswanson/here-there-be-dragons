@@ -105,7 +105,7 @@ SP-0: Tech Stack & Foundation (includes asset library)
 **What:** The core canvas — grid rendering, map image display, layers (map/token/DM), pan/zoom, and basic drawing tools. Tokens can be placed and moved on the grid.
 
 **Key features:**
-- Configurable grid (square, hex) with snap-to-grid
+- Configurable grid (square, with gridless mode) with snap-to-grid. Hex grid deferred — grid abstraction designed to support it later.
 - Map image upload and display, aligned to grid
 - Multiple layers with DM-only visibility
 - Token placement, movement, and sizing (1x1, 2x2, 3x3, etc.)

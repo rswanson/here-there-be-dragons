@@ -1,6 +1,9 @@
 pub mod auth;
+pub mod drawing;
+pub mod map;
 pub mod messages;
 pub mod models;
+pub mod token;
 
 // Re-export commonly used types
 pub use messages::*;
@@ -32,5 +35,29 @@ mod tests {
         auth::AuthResponse::export_all_to(&out_dir).unwrap();
         auth::RegisterRequest::export_all_to(&out_dir).unwrap();
         auth::LoginRequest::export_all_to(&out_dir).unwrap();
+
+        // Map
+        map::Map::export_all_to(&out_dir).unwrap();
+        map::MapLayer::export_all_to(&out_dir).unwrap();
+        map::MapImage::export_all_to(&out_dir).unwrap();
+        map::CreateMapRequest::export_all_to(&out_dir).unwrap();
+        map::UpdateMapRequest::export_all_to(&out_dir).unwrap();
+        map::MapWithLayers::export_all_to(&out_dir).unwrap();
+        map::CreateLayerRequest::export_all_to(&out_dir).unwrap();
+        map::UpdateLayerRequest::export_all_to(&out_dir).unwrap();
+        map::PlaceMapImageRequest::export_all_to(&out_dir).unwrap();
+        map::UpdateMapImageRequest::export_all_to(&out_dir).unwrap();
+
+        // Token
+        token::Token::export_all_to(&out_dir).unwrap();
+        token::TokenBar::export_all_to(&out_dir).unwrap();
+        token::CreateTokenRequest::export_all_to(&out_dir).unwrap();
+        token::UpdateTokenRequest::export_all_to(&out_dir).unwrap();
+
+        // Drawing
+        drawing::Drawing::export_all_to(&out_dir).unwrap();
+        drawing::DrawingType::export_all_to(&out_dir).unwrap();
+        drawing::CreateDrawingRequest::export_all_to(&out_dir).unwrap();
+        drawing::UpdateDrawingRequest::export_all_to(&out_dir).unwrap();
     }
 }

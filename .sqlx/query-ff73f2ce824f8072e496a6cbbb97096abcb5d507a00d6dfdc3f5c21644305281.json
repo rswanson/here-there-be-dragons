@@ -1,0 +1,113 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO maps (campaign_id, name)\n           VALUES ($1, $2)\n           RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "campaign_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "grid_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "grid_size_px",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "grid_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "grid_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "grid_line_width",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 8,
+        "name": "grid_scale",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "grid_scale_unit",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "snap_mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "diagonal_mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "width_squares",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "height_squares",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ff73f2ce824f8072e496a6cbbb97096abcb5d507a00d6dfdc3f5c21644305281"
+}

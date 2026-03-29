@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM tokens WHERE layer_id = $1 ORDER BY created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "layer_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "asset_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "x",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "y",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "size",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "rotation",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "bars_json",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "status_markers",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e65f751d20ea6ecd7d7d02f11e1898a11330876965ebac2ead334ab9e83c870b"
+}

@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO drawings (layer_id, drawing_type, points_json, stroke_color, stroke_width, stroke_opacity, fill_color, fill_opacity)\n           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n           RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "layer_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "drawing_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "points_json",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "stroke_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "stroke_width",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "stroke_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "fill_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "fill_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Float4",
+        "Float4",
+        "Text",
+        "Float4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "13de65985b321fac11b09298fd39f27a083542950ada7391289c7f7f71ed4025"
+}

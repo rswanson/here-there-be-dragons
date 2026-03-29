@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE map_layers SET sort_order = $1 WHERE id = $2 AND map_id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d3fa6c6ca84cecca24bc58b9a9ca419f1a98a551130a94a4557c83ab8c244de"
+}

@@ -1,6 +1,11 @@
 pub mod assets;
 pub mod campaigns;
+pub mod drawings;
+pub mod map_images;
+pub mod map_layers;
+pub mod maps;
 pub mod refresh_tokens;
+pub mod tokens;
 pub mod users;
 
 use sqlx::PgPool;

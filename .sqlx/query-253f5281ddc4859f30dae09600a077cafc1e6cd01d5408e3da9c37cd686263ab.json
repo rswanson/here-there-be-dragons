@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE maps SET\n            name = COALESCE($2, name),\n            grid_enabled = COALESCE($3, grid_enabled),\n            grid_size_px = COALESCE($4, grid_size_px),\n            grid_color = COALESCE($5, grid_color),\n            grid_opacity = COALESCE($6, grid_opacity),\n            grid_line_width = COALESCE($7, grid_line_width),\n            grid_scale = COALESCE($8, grid_scale),\n            grid_scale_unit = COALESCE($9, grid_scale_unit),\n            snap_mode = COALESCE($10, snap_mode),\n            diagonal_mode = COALESCE($11, diagonal_mode),\n            width_squares = COALESCE($12, width_squares),\n            height_squares = COALESCE($13, height_squares),\n            updated_at = now()\n        WHERE id = $1\n        RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "campaign_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "grid_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "grid_size_px",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "grid_color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "grid_opacity",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "grid_line_width",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 8,
+        "name": "grid_scale",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "grid_scale_unit",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "snap_mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "diagonal_mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "width_squares",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "height_squares",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Int4",
+        "Text",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "253f5281ddc4859f30dae09600a077cafc1e6cd01d5408e3da9c37cd686263ab"
+}

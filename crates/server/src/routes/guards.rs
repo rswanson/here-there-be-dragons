@@ -26,3 +26,18 @@ pub async fn require_dm(
     }
     Ok(())
 }
+
+/// Resolve layer_id → map_id → campaign_id and require DM role.
+pub async fn require_dm_for_layer(
+    state: &AppState,
+    layer_id: &Uuid,
+    user_id: Uuid,
+) -> Result<(), AppError> {
+    let map_id = db::map_layers::get_map_id_for_layer(&state.pool, layer_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let map_row = db::maps::find_by_id(&state.pool, &map_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    require_dm(state, map_row.campaign_id, user_id).await
+}
