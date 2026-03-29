@@ -30,6 +30,7 @@ mod tests {
         // Messages
         messages::ClientMessage::export_all_to(&out_dir).unwrap();
         messages::ServerMessage::export_all_to(&out_dir).unwrap();
+        messages::ConnectedUser::export_all_to(&out_dir).unwrap();
 
         // Auth
         auth::AuthResponse::export_all_to(&out_dir).unwrap();
@@ -47,6 +48,7 @@ mod tests {
         map::UpdateLayerRequest::export_all_to(&out_dir).unwrap();
         map::PlaceMapImageRequest::export_all_to(&out_dir).unwrap();
         map::UpdateMapImageRequest::export_all_to(&out_dir).unwrap();
+        map::MapFullState::export_all_to(&out_dir).unwrap();
 
         // Token
         token::Token::export_all_to(&out_dir).unwrap();

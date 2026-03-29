@@ -80,6 +80,16 @@ pub struct MapImage {
     pub opacity: f32,
 }
 
+/// Full map state including all entities on the map
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MapFullState {
+    pub map: Map,
+    pub layers: Vec<MapLayer>,
+    pub tokens: Vec<crate::token::Token>,
+    pub drawings: Vec<crate::drawing::Drawing>,
+}
+
 /// Request type for creating a new map
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]

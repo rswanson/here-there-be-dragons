@@ -1,5 +1,5 @@
 use crate::drawing::{CreateDrawingRequest, Drawing, UpdateDrawingRequest};
-use crate::map::{MapImage, MapLayer, PlaceMapImageRequest, UpdateMapImageRequest};
+use crate::map::{Map, MapImage, MapLayer, PlaceMapImageRequest, UpdateMapImageRequest};
 use crate::token::{CreateTokenRequest, Token, UpdateTokenRequest};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -53,6 +53,22 @@ pub enum ClientMessage {
     DeleteMapImage {
         image_id: Uuid,
     },
+    JoinSession {
+        campaign_id: Uuid,
+    },
+    LeaveSession {},
+    RequestFullState {
+        map_id: Uuid,
+    },
+}
+
+/// A connected user in a session
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ConnectedUser {
+    pub user_id: Uuid,
+    pub display_name: String,
+    pub role: String,
 }
 
 /// Messages sent from server to client
@@ -109,5 +125,24 @@ pub enum ServerMessage {
     },
     MapImageDeleted {
         image_id: Uuid,
+    },
+    SessionJoined {
+        user_id: Uuid,
+        campaign_id: Uuid,
+        connected_users: Vec<ConnectedUser>,
+    },
+    UserJoined {
+        user_id: Uuid,
+        display_name: String,
+    },
+    UserLeft {
+        user_id: Uuid,
+        display_name: String,
+    },
+    FullState {
+        map: Map,
+        layers: Vec<MapLayer>,
+        tokens: Vec<Token>,
+        drawings: Vec<Drawing>,
     },
 }
