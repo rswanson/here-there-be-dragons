@@ -11,6 +11,7 @@ use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
 use htbd_core::map::*;
+use htbd_core::messages::ServerMessage;
 
 use super::guards::require_dm;
 
@@ -42,7 +43,17 @@ async fn create_layer(
         db::map_layers::create_layer(&state.pool, &map_id, &req.name, layer_type_str, req.dm_only)
             .await?;
 
-    Ok(Json(row.into()))
+    let layer: MapLayer = row.into();
+
+    let msg = ServerMessage::LayerCreated {
+        layer: layer.clone(),
+    };
+    state
+        .session_manager
+        .broadcast(map_row.campaign_id, &msg, None)
+        .await;
+
+    Ok(Json(layer))
 }
 
 #[derive(Deserialize)]
@@ -62,6 +73,16 @@ async fn reorder_layers(
     require_dm(&state, map_row.campaign_id, auth.user_id).await?;
 
     db::map_layers::reorder_layers(&state.pool, &map_id, &req.layer_ids).await?;
+
+    let msg = ServerMessage::LayersReordered {
+        map_id,
+        layer_ids: req.layer_ids,
+    };
+    state
+        .session_manager
+        .broadcast(map_row.campaign_id, &msg, None)
+        .await;
+
     Ok(StatusCode::OK)
 }
 
@@ -91,7 +112,17 @@ async fn update_layer(
     .await?
     .ok_or(AppError::NotFound)?;
 
-    Ok(Json(updated.into()))
+    let layer: MapLayer = updated.into();
+
+    let msg = ServerMessage::LayerUpdated {
+        layer: layer.clone(),
+    };
+    state
+        .session_manager
+        .broadcast(map_row.campaign_id, &msg, None)
+        .await;
+
+    Ok(Json(layer))
 }
 
 async fn delete_layer(
@@ -108,5 +139,12 @@ async fn delete_layer(
     require_dm(&state, map_row.campaign_id, auth.user_id).await?;
 
     db::map_layers::delete_layer(&state.pool, &id).await?;
+
+    let msg = ServerMessage::LayerDeleted { layer_id: id };
+    state
+        .session_manager
+        .broadcast(map_row.campaign_id, &msg, None)
+        .await;
+
     Ok(StatusCode::NO_CONTENT)
 }

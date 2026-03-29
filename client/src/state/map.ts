@@ -49,7 +49,9 @@ export const useMapStore = create<MapState>()((set) => ({
 
   addLayer: (layer) =>
     set((s) => ({
-      layers: [...s.layers, layer],
+      layers: s.layers.some((l) => l.id === layer.id)
+        ? s.layers
+        : [...s.layers, layer],
     })),
 
   removeLayer: (layerId) =>

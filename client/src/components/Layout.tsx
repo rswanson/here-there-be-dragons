@@ -1,6 +1,7 @@
 import { Outlet, Link } from 'react-router-dom'
 import { useSessionStore } from '../state/session'
 import { api } from '../api/client'
+import { ConnectionStatus } from './ConnectionStatus'
 
 export function Layout() {
   const user = useSessionStore((s) => s.user)
@@ -28,6 +29,7 @@ export function Layout() {
         </Link>
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+            <ConnectionStatus />
             <span>{user.display_name}</span>
             <button onClick={handleLogout}>Logout</button>
           </div>

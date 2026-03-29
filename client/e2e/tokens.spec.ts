@@ -26,7 +26,7 @@ test.describe('Token Management', () => {
     await createCampaignAndMap(page, 'Token Empty Test')
 
     // Layer panel should be visible with at least default layers
-    await expect(page.getByText('Layers')).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('heading', { name: 'Layers' })).toBeVisible({ timeout: 5_000 })
 
     // Token Inspector should not be visible when nothing is selected
     await expect(page.locator('h3', { hasText: 'Token' })).not.toBeVisible()

@@ -6,6 +6,7 @@ pub mod guards;
 pub mod layers;
 pub mod map_images;
 pub mod maps;
+pub mod state;
 pub mod tokens;
 pub mod ws;
 
@@ -17,10 +18,11 @@ pub fn api_routes() -> Router<AppState> {
         .nest("/auth", auth::routes())
         .nest("/campaigns", campaigns::routes())
         .nest("/assets", assets::routes())
-        .nest("/ws", ws::routes())
+        .route("/ws/{campaign_id}", axum::routing::get(ws::ws_upgrade))
         .merge(maps::routes())
         .merge(layers::routes())
         .merge(map_images::routes())
         .merge(drawings::routes())
         .merge(tokens::routes())
+        .route("/maps/{id}/state", axum::routing::get(state::get_map_state))
 }

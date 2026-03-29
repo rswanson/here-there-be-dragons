@@ -9,10 +9,11 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
+use htbd_core::messages::ServerMessage;
 use htbd_core::models::CampaignRole;
 use htbd_core::token::*;
 
-use super::guards::{require_dm, require_member};
+use super::guards::{get_campaign_id_for_layer, require_dm, require_member};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -23,24 +24,15 @@ pub fn routes() -> Router<AppState> {
         )
 }
 
-/// Resolve layer_id → map_id → campaign_id
-async fn get_campaign_for_layer(state: &AppState, layer_id: &Uuid) -> Result<Uuid, AppError> {
-    let map_id = db::map_layers::get_map_id_for_layer(&state.pool, layer_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    let map_row = db::maps::find_by_id(&state.pool, &map_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    Ok(map_row.campaign_id)
-}
-
 async fn create_token(
     State(state): State<AppState>,
     auth: AuthUser,
     Path(layer_id): Path<Uuid>,
     Json(req): Json<CreateTokenRequest>,
 ) -> Result<Json<Token>, AppError> {
-    let campaign_id = get_campaign_for_layer(&state, &layer_id).await?;
+    let campaign_id = get_campaign_id_for_layer(&state, &layer_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     require_dm(&state, campaign_id, auth.user_id).await?;
 
     if req.name.is_empty() {
@@ -64,7 +56,19 @@ async fn create_token(
     )
     .await?;
 
-    Ok(Json(row.into()))
+    let token: Token = row.into();
+
+    let msg = ServerMessage::TokenCreated {
+        layer_id,
+        token: token.clone(),
+        created_by: auth.user_id,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+
+    Ok(Json(token))
 }
 
 async fn update_token(
@@ -77,7 +81,9 @@ async fn update_token(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let campaign_id = get_campaign_for_layer(&state, &layer_id).await?;
+    let campaign_id = get_campaign_id_for_layer(&state, &layer_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     let role = require_member(&state, campaign_id, auth.user_id).await?;
 
     // Players can only update tokens they own
@@ -109,7 +115,19 @@ async fn update_token(
     .await?
     .ok_or(AppError::NotFound)?;
 
-    Ok(Json(updated.into()))
+    let token: Token = updated.into();
+
+    let msg = ServerMessage::TokenUpdated {
+        token_id: id,
+        patch: req,
+        updated_by: auth.user_id,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+
+    Ok(Json(token))
 }
 
 async fn delete_token(
@@ -121,9 +139,21 @@ async fn delete_token(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let campaign_id = get_campaign_for_layer(&state, &layer_id).await?;
+    let campaign_id = get_campaign_id_for_layer(&state, &layer_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
     require_dm(&state, campaign_id, auth.user_id).await?;
 
     db::tokens::delete_token(&state.pool, &id).await?;
+
+    let msg = ServerMessage::TokenDeleted {
+        token_id: id,
+        deleted_by: auth.user_id,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+
     Ok(StatusCode::NO_CONTENT)
 }

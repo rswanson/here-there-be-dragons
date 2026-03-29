@@ -1,5 +1,6 @@
 import type { Map } from '../types/Map'
 import type { MapWithLayers } from '../types/MapWithLayers'
+import type { MapFullState } from '../types/MapFullState'
 import type { CreateMapRequest } from '../types/CreateMapRequest'
 import type { UpdateMapRequest } from '../types/UpdateMapRequest'
 import type { MapLayer } from '../types/MapLayer'
@@ -22,6 +23,9 @@ export const mapsApi = {
 
   get: (mapId: string) =>
     request<MapWithLayers>(`/maps/${mapId}`),
+
+  getState: (mapId: string) =>
+    request<MapFullState>(`/maps/${mapId}/state`),
 
   update: (mapId: string, data: UpdateMapRequest) =>
     request<Map>(`/maps/${mapId}`, {

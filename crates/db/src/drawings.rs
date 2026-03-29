@@ -82,6 +82,41 @@ pub async fn list_for_layer(
     .await
 }
 
+pub async fn list_for_map(pool: &PgPool, map_id: &Uuid) -> Result<Vec<DrawingRow>, sqlx::Error> {
+    sqlx::query_as!(
+        DrawingRow,
+        r#"SELECT d.id, d.layer_id, d.drawing_type, d.points_json,
+                  d.stroke_color, d.stroke_width, d.stroke_opacity,
+                  d.fill_color, d.fill_opacity, d.created_at
+           FROM drawings d
+           JOIN map_layers l ON d.layer_id = l.id
+           WHERE l.map_id = $1
+           ORDER BY d.created_at ASC"#,
+        map_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn list_for_map_player(
+    pool: &PgPool,
+    map_id: &Uuid,
+) -> Result<Vec<DrawingRow>, sqlx::Error> {
+    sqlx::query_as!(
+        DrawingRow,
+        r#"SELECT d.id, d.layer_id, d.drawing_type, d.points_json,
+                  d.stroke_color, d.stroke_width, d.stroke_opacity,
+                  d.fill_color, d.fill_opacity, d.created_at
+           FROM drawings d
+           JOIN map_layers l ON d.layer_id = l.id
+           WHERE l.map_id = $1 AND l.dm_only = false
+           ORDER BY d.created_at ASC"#,
+        map_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn update_drawing(
     pool: &PgPool,

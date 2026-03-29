@@ -10,8 +10,9 @@ use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
 use htbd_core::map::*;
+use htbd_core::messages::ServerMessage;
 
-use super::guards::require_dm_for_layer;
+use super::guards::{get_campaign_id_for_layer, require_dm_for_layer};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -43,7 +44,20 @@ async fn place_image(
     )
     .await?;
 
-    Ok(Json(row.into()))
+    let image: MapImage = row.into();
+
+    if let Some(campaign_id) = get_campaign_id_for_layer(&state, &layer_id).await? {
+        let msg = ServerMessage::MapImagePlaced {
+            layer_id,
+            image: image.clone(),
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+
+    Ok(Json(image))
 }
 
 async fn update_image(
@@ -70,7 +84,20 @@ async fn update_image(
     .await?
     .ok_or(AppError::NotFound)?;
 
-    Ok(Json(updated.into()))
+    let image: MapImage = updated.into();
+
+    if let Some(campaign_id) = get_campaign_id_for_layer(&state, &layer_id).await? {
+        let msg = ServerMessage::MapImageUpdated {
+            image_id: id,
+            patch: req,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+
+    Ok(Json(image))
 }
 
 async fn delete_image(
@@ -83,6 +110,18 @@ async fn delete_image(
         .ok_or(AppError::NotFound)?;
     require_dm_for_layer(&state, &layer_id, auth.user_id).await?;
 
+    // Resolve campaign_id before deleting
+    let campaign_id = get_campaign_id_for_layer(&state, &layer_id).await?;
+
     db::map_images::delete_image(&state.pool, &id).await?;
+
+    if let Some(campaign_id) = campaign_id {
+        let msg = ServerMessage::MapImageDeleted { image_id: id };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }

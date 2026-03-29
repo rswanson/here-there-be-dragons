@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,\n                  t.x, t.y, t.size, t.rotation, t.bars_json,\n                  t.status_markers, t.created_at, t.updated_at\n           FROM tokens t\n           JOIN map_layers l ON t.layer_id = l.id\n           WHERE l.map_id = $1 AND l.dm_only = false\n           ORDER BY t.created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "layer_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "asset_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "x",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "y",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "size",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "rotation",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 9,
+        "name": "bars_json",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "status_markers",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6252a3e7ec052f6b062c5370ef73390dad8f483b31018cb47d9b130557d454e3"
+}

@@ -41,6 +41,7 @@ export const useDrawingStore = create<DrawingState>()((set) => ({
 
   addDrawing: (drawing) =>
     set((s) => {
+      if (s.drawings.some((d) => d.id === drawing.id)) return s;
       const layerId = drawing.layer_id;
       const undoStack = boundStack([
         ...(s.undoStacks[layerId] ?? []),

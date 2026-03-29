@@ -2,6 +2,7 @@ pub mod config;
 pub mod error;
 pub mod middleware;
 pub mod routes;
+pub mod session;
 pub mod state;
 
 use axum::Router;

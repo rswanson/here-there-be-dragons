@@ -32,6 +32,7 @@ mod tests {
         // Messages
         messages::ClientMessage::export_all(&cfg).unwrap();
         messages::ServerMessage::export_all(&cfg).unwrap();
+        messages::ConnectedUser::export_all(&cfg).unwrap();
 
         // Auth
         auth::AuthResponse::export_all(&cfg).unwrap();
@@ -49,6 +50,7 @@ mod tests {
         map::UpdateLayerRequest::export_all(&cfg).unwrap();
         map::PlaceMapImageRequest::export_all(&cfg).unwrap();
         map::UpdateMapImageRequest::export_all(&cfg).unwrap();
+        map::MapFullState::export_all(&cfg).unwrap();
 
         // Token
         token::Token::export_all(&cfg).unwrap();

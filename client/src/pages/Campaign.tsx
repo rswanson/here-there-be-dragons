@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { mapsApi } from '../api/maps'
+import { wsClient } from '../api/ws'
+import { createMessageDispatcher } from '../api/dispatcher'
 import { CanvasView } from '../canvas/CanvasView'
 import { AssetBrowser } from '../components/AssetBrowser'
 import { Toolbar } from '../components/Toolbar'
@@ -10,6 +12,7 @@ import { LayerPanel } from '../components/LayerPanel'
 import { TokenInspector } from '../components/TokenInspector'
 import { MapSettings } from '../components/MapSettings'
 import { TokenContextMenu } from '../components/TokenContextMenu'
+import { PlayersOnline } from '../components/PlayersOnline'
 import { useMapStore } from '../state/map'
 import { useTokenStore } from '../state/tokens'
 import { useDrawingStore } from '../state/drawings'
@@ -32,6 +35,12 @@ export function Campaign() {
   const loadMap = useMapStore((s) => s.loadMap)
   const loadTokens = useTokenStore((s) => s.loadTokens)
   const loadDrawings = useDrawingStore((s) => s.loadDrawings)
+
+  // Keep a ref to selectedMapId for the reconnect callback
+  const selectedMapIdRef = useRef(selectedMapId)
+  useEffect(() => {
+    selectedMapIdRef.current = selectedMapId
+  }, [selectedMapId])
 
   const { data: campaign, isLoading } = useQuery({
     queryKey: ['campaign', id],
@@ -61,20 +70,41 @@ export function Campaign() {
     },
   })
 
-  // When map is selected, load it into stores
+  // WebSocket connection lifecycle
+  useEffect(() => {
+    if (!id) return
+
+    const dispatch = createMessageDispatcher()
+    const unsub = wsClient.subscribe(dispatch)
+
+    wsClient.connect(id, () => {
+      // Reconnect handler: reload current map state
+      const mapId = selectedMapIdRef.current
+      if (mapId) {
+        mapsApi.getState(mapId).then((data) => {
+          loadMap(data.map, data.layers)
+          loadTokens(data.tokens)
+          loadDrawings(data.drawings)
+        })
+      }
+    })
+
+    return () => {
+      unsub()
+      wsClient.disconnect()
+    }
+  }, [id, loadMap, loadTokens, loadDrawings])
+
+  // When map is selected, load full state via composite endpoint
   useEffect(() => {
     if (!selectedMapId) return
     let cancelled = false
-    const load = async () => {
-      const mapData = await mapsApi.get(selectedMapId)
+    mapsApi.getState(selectedMapId).then((data) => {
       if (cancelled) return
-      const { layers, ...mapFields } = mapData
-      loadMap(mapFields, layers)
-      // Tokens and drawings APIs don't have list endpoints yet — start empty
-      loadTokens([])
-      loadDrawings([])
-    }
-    void load()
+      loadMap(data.map, data.layers)
+      loadTokens(data.tokens)
+      loadDrawings(data.drawings)
+    })
     return () => {
       cancelled = true
     }
@@ -219,6 +249,9 @@ export function Campaign() {
               Asset Library
             </button>
             <AssetBrowser campaignId={id!} open={assetBrowserOpen} onOpenChange={setAssetBrowserOpen} />
+
+            {/* Players Online */}
+            <PlayersOnline />
           </div>
         )}
       </aside>

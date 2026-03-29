@@ -90,6 +90,41 @@ pub async fn list_for_layer(pool: &PgPool, layer_id: &Uuid) -> Result<Vec<TokenR
     .await
 }
 
+pub async fn list_for_map(pool: &PgPool, map_id: &Uuid) -> Result<Vec<TokenRow>, sqlx::Error> {
+    sqlx::query_as!(
+        TokenRow,
+        r#"SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,
+                  t.x, t.y, t.size, t.rotation, t.bars_json,
+                  t.status_markers, t.created_at, t.updated_at
+           FROM tokens t
+           JOIN map_layers l ON t.layer_id = l.id
+           WHERE l.map_id = $1
+           ORDER BY t.created_at ASC"#,
+        map_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn list_for_map_player(
+    pool: &PgPool,
+    map_id: &Uuid,
+) -> Result<Vec<TokenRow>, sqlx::Error> {
+    sqlx::query_as!(
+        TokenRow,
+        r#"SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,
+                  t.x, t.y, t.size, t.rotation, t.bars_json,
+                  t.status_markers, t.created_at, t.updated_at
+           FROM tokens t
+           JOIN map_layers l ON t.layer_id = l.id
+           WHERE l.map_id = $1 AND l.dm_only = false
+           ORDER BY t.created_at ASC"#,
+        map_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
 pub async fn update_token_position(
     pool: &PgPool,
     id: &Uuid,

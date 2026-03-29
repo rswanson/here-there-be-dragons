@@ -1,5 +1,6 @@
 import type { ClientMessage } from '../types/ClientMessage'
 import type { ServerMessage } from '../types/ServerMessage'
+import { usePresenceStore } from '../state/presence'
 
 type MessageHandler = (message: ServerMessage) => void
 
@@ -8,13 +9,31 @@ export class WsClient {
   private handlers: Set<MessageHandler> = new Set()
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private intentionalClose = false
+  private campaignId: string | null = null
+  private onReconnect: (() => void) | undefined = undefined
+  private hasConnectedOnce = false
 
-  connect() {
+  connect(campaignId: string, onReconnect?: () => void) {
     this.intentionalClose = false
+    this.campaignId = campaignId
+    this.onReconnect = onReconnect
+
+    const isReconnect = this.hasConnectedOnce
+
+    usePresenceStore.getState().setConnectionState('connecting')
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${window.location.host}/api/ws`
+    const url = `${protocol}//${window.location.host}/api/ws/${campaignId}`
 
     this.ws = new WebSocket(url)
+
+    this.ws.onopen = () => {
+      this.hasConnectedOnce = true
+      usePresenceStore.getState().setConnectionState('connected')
+      if (isReconnect && this.onReconnect) {
+        this.onReconnect()
+      }
+    }
 
     this.ws.onmessage = (event) => {
       try {
@@ -26,8 +45,12 @@ export class WsClient {
     }
 
     this.ws.onclose = () => {
-      if (!this.intentionalClose) {
-        this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+      usePresenceStore.getState().setConnectionState('disconnected')
+      if (!this.intentionalClose && this.campaignId) {
+        this.reconnectTimer = setTimeout(
+          () => this.connect(this.campaignId!, this.onReconnect),
+          3000,
+        )
       }
     }
 
@@ -49,9 +72,13 @@ export class WsClient {
 
   disconnect() {
     this.intentionalClose = true
+    this.hasConnectedOnce = false
+    this.campaignId = null
+    this.onReconnect = undefined
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
     this.ws?.close()
     this.ws = null
+    usePresenceStore.getState().setConnectionState('disconnected')
   }
 }
 
