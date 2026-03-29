@@ -106,12 +106,13 @@ test.describe('Visual Regression SP-2', () => {
     await dm.page.waitForTimeout(3000)
 
     // Verify panel is visible with both users
-    await expect(dm.page.getByText('Players Online')).toBeVisible({ timeout: 10_000 })
-    await expect(dm.page.getByText('DM Visual')).toBeVisible({ timeout: 5_000 })
-    await expect(dm.page.getByText('Player Visual')).toBeVisible({ timeout: 5_000 })
+    const panel = dm.page.locator('[data-testid="players-online"]')
+    await expect(panel).toBeVisible({ timeout: 10_000 })
+    await expect(panel.getByText('DM Visual')).toBeVisible({ timeout: 5_000 })
+    await expect(panel.getByText('Player Visual')).toBeVisible({ timeout: 5_000 })
 
     // Screenshot the PlayersOnline panel
-    const playersPanel = dm.page.getByText('Players Online').locator('..')
+    const playersPanel = panel
     await expect(playersPanel).toHaveScreenshot('players-online-panel.png', {
       maxDiffPixelRatio: 0.02,
     })

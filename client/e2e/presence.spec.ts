@@ -83,15 +83,16 @@ test.describe('Presence', () => {
     const dmPlayersPanel = dm.page.getByText('Players Online')
     await expect(dmPlayersPanel).toBeVisible({ timeout: 10_000 })
 
-    // Both names should appear in the panel
-    await expect(dm.page.getByText('DM Presence')).toBeVisible({ timeout: 5_000 })
-    await expect(dm.page.getByText('Player Presence')).toBeVisible({ timeout: 5_000 })
+    // Both names should appear in the PlayersOnline panel
+    const dmPanel = dm.page.locator('[data-testid="players-online"]')
+    await expect(dmPanel.getByText('DM Presence')).toBeVisible({ timeout: 5_000 })
+    await expect(dmPanel.getByText('Player Presence')).toBeVisible({ timeout: 5_000 })
 
     // Player should also see both users
-    const playerPlayersPanel = player.page.getByText('Players Online')
-    await expect(playerPlayersPanel).toBeVisible({ timeout: 10_000 })
-    await expect(player.page.getByText('DM Presence')).toBeVisible({ timeout: 5_000 })
-    await expect(player.page.getByText('Player Presence')).toBeVisible({ timeout: 5_000 })
+    const playerPanel = player.page.locator('[data-testid="players-online"]')
+    await expect(playerPanel).toBeVisible({ timeout: 10_000 })
+    await expect(playerPanel.getByText('DM Presence')).toBeVisible({ timeout: 5_000 })
+    await expect(playerPanel.getByText('Player Presence')).toBeVisible({ timeout: 5_000 })
 
     await dm.context.close()
     await player.context.close()
@@ -129,17 +130,18 @@ test.describe('Presence', () => {
 
     // Wait for both to appear
     await dm.page.waitForTimeout(3000)
-    await expect(dm.page.getByText('Player Disconnect')).toBeVisible({ timeout: 10_000 })
+    const dmPanel = dm.page.locator('[data-testid="players-online"]')
+    await expect(dmPanel.getByText('Player Disconnect')).toBeVisible({ timeout: 10_000 })
 
     // Player disconnects
     await player.page.close()
     await player.context.close()
 
     // DM should see the player disappear from the list
-    await expect(dm.page.getByText('Player Disconnect')).not.toBeVisible({ timeout: 15_000 })
+    await expect(dmPanel.getByText('Player Disconnect')).not.toBeVisible({ timeout: 15_000 })
 
     // DM should still be listed
-    await expect(dm.page.getByText('DM Disconnect')).toBeVisible({ timeout: 5_000 })
+    await expect(dmPanel.getByText('DM Disconnect')).toBeVisible({ timeout: 5_000 })
 
     await dm.context.close()
   })

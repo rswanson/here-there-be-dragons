@@ -8,6 +8,7 @@ export function PlayersOnline() {
 
   return (
     <div
+      data-testid="players-online"
       style={{
         background: 'var(--color-surface, #2a2a3e)',
         borderRadius: 6,
