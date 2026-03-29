@@ -12,6 +12,7 @@ import { LayerPanel } from '../components/LayerPanel'
 import { TokenInspector } from '../components/TokenInspector'
 import { MapSettings } from '../components/MapSettings'
 import { TokenContextMenu } from '../components/TokenContextMenu'
+import { PlayersOnline } from '../components/PlayersOnline'
 import { useMapStore } from '../state/map'
 import { useTokenStore } from '../state/tokens'
 import { useDrawingStore } from '../state/drawings'
@@ -248,6 +249,9 @@ export function Campaign() {
               Asset Library
             </button>
             <AssetBrowser campaignId={id!} open={assetBrowserOpen} onOpenChange={setAssetBrowserOpen} />
+
+            {/* Players Online */}
+            <PlayersOnline />
           </div>
         )}
       </aside>
