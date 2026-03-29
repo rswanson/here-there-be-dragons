@@ -112,8 +112,18 @@ pub enum ServerMessage {
     DrawingDeleted {
         drawing_id: Uuid,
     },
+    LayerCreated {
+        layer: MapLayer,
+    },
     LayerUpdated {
         layer: MapLayer,
+    },
+    LayerDeleted {
+        layer_id: Uuid,
+    },
+    LayersReordered {
+        map_id: Uuid,
+        layer_ids: Vec<Uuid>,
     },
     MapImagePlaced {
         layer_id: Uuid,

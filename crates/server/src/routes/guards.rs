@@ -27,6 +27,20 @@ pub async fn require_dm(
     Ok(())
 }
 
+/// Resolve layer_id → map_id → campaign_id (returns None if chain is broken).
+pub async fn get_campaign_id_for_layer(
+    state: &AppState,
+    layer_id: &Uuid,
+) -> Result<Option<Uuid>, AppError> {
+    let map_id = db::map_layers::get_map_id_for_layer(&state.pool, layer_id).await?;
+    if let Some(map_id) = map_id
+        && let Some(map_row) = db::maps::find_by_id(&state.pool, &map_id).await?
+    {
+        return Ok(Some(map_row.campaign_id));
+    }
+    Ok(None)
+}
+
 /// Resolve layer_id → map_id → campaign_id and require DM role.
 pub async fn require_dm_for_layer(
     state: &AppState,

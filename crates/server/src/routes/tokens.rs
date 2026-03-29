@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
+use htbd_core::messages::ServerMessage;
 use htbd_core::models::CampaignRole;
 use htbd_core::token::*;
 
@@ -64,7 +65,19 @@ async fn create_token(
     )
     .await?;
 
-    Ok(Json(row.into()))
+    let token: Token = row.into();
+
+    let msg = ServerMessage::TokenCreated {
+        layer_id,
+        token: token.clone(),
+        created_by: auth.user_id,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+
+    Ok(Json(token))
 }
 
 async fn update_token(
@@ -109,7 +122,19 @@ async fn update_token(
     .await?
     .ok_or(AppError::NotFound)?;
 
-    Ok(Json(updated.into()))
+    let token: Token = updated.into();
+
+    let msg = ServerMessage::TokenUpdated {
+        token_id: id,
+        patch: req,
+        updated_by: auth.user_id,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+
+    Ok(Json(token))
 }
 
 async fn delete_token(
@@ -125,5 +150,15 @@ async fn delete_token(
     require_dm(&state, campaign_id, auth.user_id).await?;
 
     db::tokens::delete_token(&state.pool, &id).await?;
+
+    let msg = ServerMessage::TokenDeleted {
+        token_id: id,
+        deleted_by: auth.user_id,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+
     Ok(StatusCode::NO_CONTENT)
 }

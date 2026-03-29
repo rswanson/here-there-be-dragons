@@ -10,8 +10,9 @@ use crate::error::AppError;
 use crate::middleware::auth::AuthUser;
 use crate::state::AppState;
 use htbd_core::drawing::*;
+use htbd_core::messages::ServerMessage;
 
-use super::guards::require_dm_for_layer;
+use super::guards::{get_campaign_id_for_layer, require_dm_for_layer};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -46,7 +47,20 @@ async fn create_drawing(
     )
     .await?;
 
-    Ok(Json(row.into()))
+    let drawing: Drawing = row.into();
+
+    if let Some(campaign_id) = get_campaign_id_for_layer(&state, &layer_id).await? {
+        let msg = ServerMessage::DrawingCreated {
+            layer_id,
+            drawing: drawing.clone(),
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+
+    Ok(Json(drawing))
 }
 
 async fn update_drawing(
@@ -73,7 +87,20 @@ async fn update_drawing(
     .await?
     .ok_or(AppError::NotFound)?;
 
-    Ok(Json(updated.into()))
+    let drawing: Drawing = updated.into();
+
+    if let Some(campaign_id) = get_campaign_id_for_layer(&state, &layer_id).await? {
+        let msg = ServerMessage::DrawingUpdated {
+            drawing_id: id,
+            patch: req,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+
+    Ok(Json(drawing))
 }
 
 async fn delete_drawing(
@@ -86,6 +113,18 @@ async fn delete_drawing(
         .ok_or(AppError::NotFound)?;
     require_dm_for_layer(&state, &layer_id, auth.user_id).await?;
 
+    // Resolve campaign_id before deleting
+    let campaign_id = get_campaign_id_for_layer(&state, &layer_id).await?;
+
     db::drawings::delete_drawing(&state.pool, &id).await?;
+
+    if let Some(campaign_id) = campaign_id {
+        let msg = ServerMessage::DrawingDeleted { drawing_id: id };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
