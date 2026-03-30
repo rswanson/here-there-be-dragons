@@ -10,7 +10,7 @@ import { registerAndLogin, createCampaign, navigateToCampaign } from './helpers'
  * Assumes the page is already on the campaign view.
  */
 async function createCharacter(page: Page, name: string): Promise<void> {
-  await page.getByRole('button', { name: '+ New' }).click()
+  await page.getByRole('button', { name: '+ New', exact: true }).click()
   // Wait for the dialog to open
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
   // Wait for game systems to load (the select should have a real option, not "Loading...")
