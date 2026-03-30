@@ -1,5 +1,8 @@
+use crate::chat::ChatMessage;
 use crate::drawing::{CreateDrawingRequest, Drawing, UpdateDrawingRequest};
 use crate::game_system::BonusEntry;
+use crate::handout::HandoutSummary;
+use crate::initiative::{Combatant, Encounter, NewCombatant};
 use crate::map::{Map, MapImage, MapLayer, PlaceMapImageRequest, UpdateMapImageRequest};
 use crate::token::{CreateTokenRequest, Token, UpdateTokenRequest};
 use serde::{Deserialize, Serialize};
@@ -87,6 +90,47 @@ pub enum ClientMessage {
     LinkTokenToCharacter {
         token_id: Uuid,
         character_id: Option<Uuid>,
+    },
+
+    // Chat
+    SendChatMessage {
+        character_id: Option<Uuid>,
+        message_type: String,
+        content: String,
+        whisper_target_ids: Vec<Uuid>,
+    },
+
+    // Initiative (DM only)
+    StartEncounter {
+        combatants: Vec<NewCombatant>,
+    },
+    AddCombatant {
+        encounter_id: Uuid,
+        character_id: Option<Uuid>,
+        name: String,
+        initiative_value: i32,
+    },
+    RemoveCombatant {
+        combatant_id: Uuid,
+    },
+    UpdateCombatantInitiative {
+        combatant_id: Uuid,
+        initiative_value: i32,
+    },
+    RollAllInitiative {
+        encounter_id: Uuid,
+    },
+    RollCombatantInitiative {
+        combatant_id: Uuid,
+    },
+    NextTurn {
+        encounter_id: Uuid,
+    },
+    PreviousTurn {
+        encounter_id: Uuid,
+    },
+    EndEncounter {
+        encounter_id: Uuid,
     },
 }
 
@@ -209,5 +253,47 @@ pub enum ServerMessage {
     TokenCharacterLinked {
         token_id: Uuid,
         character_id: Option<Uuid>,
+    },
+
+    // Chat
+    ChatMessageReceived {
+        message: ChatMessage,
+    },
+
+    // Handout notifications
+    HandoutCreated {
+        handout: HandoutSummary,
+    },
+    HandoutUpdated {
+        handout: HandoutSummary,
+    },
+    HandoutDeleted {
+        handout_id: Uuid,
+    },
+
+    // Initiative
+    EncounterStarted {
+        encounter: Encounter,
+    },
+    CombatantAdded {
+        combatant: Combatant,
+    },
+    CombatantRemoved {
+        combatant_id: Uuid,
+    },
+    CombatantInitiativeUpdated {
+        combatant_id: Uuid,
+        initiative_value: i32,
+        sort_order: i32,
+    },
+    AllInitiativeRolled {
+        combatants: Vec<Combatant>,
+    },
+    TurnAdvanced {
+        current_turn_index: i32,
+        round_number: i32,
+    },
+    EncounterEnded {
+        encounter_id: Uuid,
     },
 }
