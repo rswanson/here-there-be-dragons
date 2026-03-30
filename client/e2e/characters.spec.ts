@@ -81,11 +81,10 @@ test.describe('Character System', () => {
     // Click the character in the list — it uses role="button"
     await page.getByRole('button', { name: 'Gandalf', exact: false }).click()
 
-    // The character sheet panel should become visible with the character name
-    // The sheet renders an input at the top containing the character name
-    await expect(page.locator('input[type="text"][value="Gandalf"]')).toBeVisible({
-      timeout: 5_000,
-    })
+    // The character sheet panel should show a text input containing the character name
+    const nameInput = page.locator('input[type="text"]').first()
+    await expect(nameInput).toBeVisible({ timeout: 5_000 })
+    await expect(nameInput).toHaveValue('Gandalf', { timeout: 5_000 })
   })
 
   test('field editing — edited value is reflected in the sheet', async ({ page }) => {
@@ -100,12 +99,11 @@ test.describe('Character System', () => {
     await page.getByRole('button', { name: 'Frodo', exact: false }).click()
 
     // The sheet renders a header input with the character name
-    const nameInput = page.locator('input[type="text"][value="Frodo"]')
+    const nameInput = page.locator('input[type="text"]').first()
     await expect(nameInput).toBeVisible({ timeout: 5_000 })
+    await expect(nameInput).toHaveValue('Frodo', { timeout: 5_000 })
 
-    // Look for a schema-driven numeric field. The schema may or may not have loaded;
-    // if the sheet has a field labelled "Strength" we edit it, otherwise we fall back
-    // to editing the name input which always exists.
+    // Look for a schema-driven numeric field (e.g., Strength)
     const strengthInput = page.locator('input[type="number"]').first()
     const strengthVisible = await strengthInput.isVisible().catch(() => false)
 
@@ -119,7 +117,7 @@ test.describe('Character System', () => {
       // Edit the name field (debounced WS send for __name__)
       await nameInput.fill('Frodo Baggins')
       await page.waitForTimeout(800)
-      await expect(page.locator('input[type="text"]').first()).toHaveValue('Frodo Baggins')
+      await expect(nameInput).toHaveValue('Frodo Baggins')
     }
   })
 
@@ -135,8 +133,9 @@ test.describe('Character System', () => {
 
     // Open the sheet
     await page.getByRole('button', { name: 'Boromir', exact: false }).click()
-    const nameInput = page.locator('input[type="text"][value="Boromir"]')
+    const nameInput = page.locator('input[type="text"]').first()
     await expect(nameInput).toBeVisible({ timeout: 5_000 })
+    await expect(nameInput).toHaveValue('Boromir', { timeout: 5_000 })
 
     // Edit the name (always available, debounced WS UpdateCharacterFields)
     await nameInput.fill('Boromir of Gondor')
