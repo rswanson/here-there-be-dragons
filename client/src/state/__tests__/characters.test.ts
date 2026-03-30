@@ -65,7 +65,7 @@ describe('useCharacterStore', () => {
   it('adds a bonus entry', () => {
     useCharacterStore.getState().addCharacter(makeCharacter())
     useCharacterStore.getState().handleBonusAdded('char-1', 'armor_class', {
-      id: 'bonus-1', source: 'Plate', bonus_type: 'armor', value: 8,
+      id: 'bonus-1', source: 'Plate', bonus_type: 'armor', value: BigInt(8),
     })
     const char = useCharacterStore.getState().characters.find((c) => c.id === 'char-1')
     expect(char?.bonuses.armor_class).toHaveLength(1)
@@ -74,7 +74,7 @@ describe('useCharacterStore', () => {
 
   it('removes a bonus entry', () => {
     useCharacterStore.getState().addCharacter(makeCharacter({
-      bonuses: { armor_class: [{ id: 'bonus-1', source: 'Plate', bonus_type: 'armor', value: 8 }] },
+      bonuses: { armor_class: [{ id: 'bonus-1', source: 'Plate', bonus_type: 'armor', value: BigInt(8) }] },
     }))
     useCharacterStore.getState().handleBonusRemoved('char-1', 'bonus-1', 'armor_class')
     const char = useCharacterStore.getState().characters.find((c) => c.id === 'char-1')
@@ -83,13 +83,13 @@ describe('useCharacterStore', () => {
 
   it('updates a bonus entry', () => {
     useCharacterStore.getState().addCharacter(makeCharacter({
-      bonuses: { armor_class: [{ id: 'bonus-1', source: 'Leather', bonus_type: 'armor', value: 2 }] },
+      bonuses: { armor_class: [{ id: 'bonus-1', source: 'Leather', bonus_type: 'armor', value: BigInt(2) }] },
     }))
     useCharacterStore.getState().handleBonusUpdated('char-1', 'armor_class', {
-      id: 'bonus-1', source: 'Full Plate', bonus_type: 'armor', value: 8,
+      id: 'bonus-1', source: 'Full Plate', bonus_type: 'armor', value: BigInt(8),
     })
     const char = useCharacterStore.getState().characters.find((c) => c.id === 'char-1')
-    expect(char?.bonuses.armor_class[0].value).toBe(8)
+    expect(char?.bonuses.armor_class[0].value).toBe(BigInt(8))
     expect(char?.bonuses.armor_class[0].source).toBe('Full Plate')
   })
 })

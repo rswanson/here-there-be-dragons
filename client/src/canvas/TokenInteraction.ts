@@ -90,7 +90,6 @@ export class TokenInteraction {
   private readonly onMouseUp: (e: MouseEvent) => void
   private readonly onContextMenu: (e: MouseEvent) => void
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(app: Application, viewport: Viewport, _layerManager: LayerManager) {
     this.app = app
     this.viewport = viewport

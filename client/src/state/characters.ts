@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Character } from '../types/Character';
 import type { BonusEntry } from '../types/BonusEntry';
 import type { SheetSchema } from '../types/SheetSchema';
+import type { JsonValue } from '../types/serde_json/JsonValue';
 
 interface CharacterState {
   characters: Character[];
@@ -15,7 +16,7 @@ interface CharacterState {
   setActiveCharacter: (characterId: string | null) => void;
   cacheSchema: (gameSystemId: string, schema: SheetSchema) => void;
 
-  handleFieldsUpdated: (characterId: string, fields: Record<string, unknown>) => void;
+  handleFieldsUpdated: (characterId: string, fields: Record<string, JsonValue>) => void;
   handleBonusAdded: (characterId: string, fieldId: string, bonus: BonusEntry) => void;
   handleBonusRemoved: (characterId: string, bonusId: string, fieldId: string) => void;
   handleBonusUpdated: (characterId: string, fieldId: string, bonus: BonusEntry) => void;

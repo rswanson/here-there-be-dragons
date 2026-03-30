@@ -3,6 +3,7 @@ import { useCharacterStore } from '../state/characters'
 import { gameSystemsApi } from '../api/game-systems'
 import { wsClient } from '../api/ws'
 import { SheetSection } from './CharacterSheet/SheetSection'
+import type { JsonValue } from '../types/serde_json/JsonValue'
 
 export function CharacterSheet() {
   const activeCharacterId = useCharacterStore((s) => s.activeCharacterId)
@@ -30,7 +31,7 @@ export function CharacterSheet() {
 
   // Debounced field update
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingFields = useRef<Record<string, unknown>>({})
+  const pendingFields = useRef<Record<string, JsonValue>>({})
 
   const flushFields = useCallback(() => {
     if (!character) return
@@ -46,7 +47,7 @@ export function CharacterSheet() {
 
   const handleFieldChange = useCallback(
     (fieldId: string, value: unknown) => {
-      pendingFields.current[fieldId] = value
+      pendingFields.current[fieldId] = value as JsonValue
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(flushFields, 300)
     },
