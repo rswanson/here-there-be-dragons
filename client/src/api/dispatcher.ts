@@ -6,6 +6,9 @@ import { useDrawingStore } from '../state/drawings';
 import { usePresenceStore } from '../state/presence';
 import { useMapStore } from '../state/map';
 import { useCharacterStore } from '../state/characters';
+import { useChatStore } from '../state/chat';
+import { useHandoutStore } from '../state/handouts';
+import { useInitiativeStore } from '../state/initiative';
 
 /**
  * Creates a message dispatcher that routes incoming server WebSocket messages
@@ -110,6 +113,59 @@ export function createMessageDispatcher(): (msg: ServerMessage) => void {
         break;
       }
       case 'TokenCharacterLinked': {
+        break;
+      }
+
+      // Chat messages
+      case 'ChatMessageReceived': {
+        const { message } = msg.payload;
+        useChatStore.getState().handleIncomingMessage(message);
+        break;
+      }
+
+      // Handout messages
+      case 'HandoutCreated': {
+        useHandoutStore.getState().handleHandoutCreated(msg.payload.handout);
+        break;
+      }
+      case 'HandoutUpdated': {
+        useHandoutStore.getState().handleHandoutUpdated(msg.payload.handout);
+        break;
+      }
+      case 'HandoutDeleted': {
+        useHandoutStore.getState().handleHandoutDeleted(msg.payload.handout_id);
+        break;
+      }
+
+      // Initiative/encounter messages
+      case 'EncounterStarted': {
+        useInitiativeStore.getState().handleEncounterStarted(msg.payload.encounter);
+        break;
+      }
+      case 'CombatantAdded': {
+        useInitiativeStore.getState().handleCombatantAdded(msg.payload.combatant);
+        break;
+      }
+      case 'CombatantRemoved': {
+        useInitiativeStore.getState().handleCombatantRemoved(msg.payload.combatant_id);
+        break;
+      }
+      case 'CombatantInitiativeUpdated': {
+        const { combatant_id, initiative_value, sort_order } = msg.payload;
+        useInitiativeStore.getState().handleCombatantInitiativeUpdated(combatant_id, initiative_value, sort_order);
+        break;
+      }
+      case 'AllInitiativeRolled': {
+        useInitiativeStore.getState().handleAllInitiativeRolled(msg.payload.combatants);
+        break;
+      }
+      case 'TurnAdvanced': {
+        const { current_turn_index, round_number } = msg.payload;
+        useInitiativeStore.getState().handleTurnAdvanced(current_turn_index, round_number);
+        break;
+      }
+      case 'EncounterEnded': {
+        useInitiativeStore.getState().handleEncounterEnded();
         break;
       }
 
