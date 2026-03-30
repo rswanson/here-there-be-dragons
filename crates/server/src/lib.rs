@@ -1,5 +1,6 @@
 pub mod config;
 pub mod error;
+pub mod game_system;
 pub mod middleware;
 pub mod routes;
 pub mod session;
