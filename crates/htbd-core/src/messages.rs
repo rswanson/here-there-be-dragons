@@ -1,7 +1,9 @@
 use crate::drawing::{CreateDrawingRequest, Drawing, UpdateDrawingRequest};
+use crate::game_system::BonusEntry;
 use crate::map::{Map, MapImage, MapLayer, PlaceMapImageRequest, UpdateMapImageRequest};
 use crate::token::{CreateTokenRequest, Token, UpdateTokenRequest};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -59,6 +61,32 @@ pub enum ClientMessage {
     LeaveSession {},
     RequestFullState {
         map_id: Uuid,
+    },
+    UpdateCharacterFields {
+        character_id: Uuid,
+        fields: HashMap<String, serde_json::Value>,
+    },
+    AddCharacterBonus {
+        character_id: Uuid,
+        field_id: String,
+        source: String,
+        bonus_type: String,
+        value: i64,
+    },
+    RemoveCharacterBonus {
+        character_id: Uuid,
+        bonus_id: Uuid,
+    },
+    UpdateCharacterBonus {
+        character_id: Uuid,
+        bonus_id: Uuid,
+        source: Option<String>,
+        bonus_type: Option<String>,
+        value: Option<i64>,
+    },
+    LinkTokenToCharacter {
+        token_id: Uuid,
+        character_id: Option<Uuid>,
     },
 }
 
@@ -154,5 +182,32 @@ pub enum ServerMessage {
         layers: Vec<MapLayer>,
         tokens: Vec<Token>,
         drawings: Vec<Drawing>,
+    },
+    CharacterFieldsUpdated {
+        character_id: Uuid,
+        fields: HashMap<String, serde_json::Value>,
+        updated_by: Uuid,
+    },
+    CharacterBonusAdded {
+        character_id: Uuid,
+        field_id: String,
+        bonus: BonusEntry,
+        computed_total: i64,
+    },
+    CharacterBonusRemoved {
+        character_id: Uuid,
+        bonus_id: Uuid,
+        field_id: String,
+        computed_total: i64,
+    },
+    CharacterBonusUpdated {
+        character_id: Uuid,
+        bonus: BonusEntry,
+        field_id: String,
+        computed_total: i64,
+    },
+    TokenCharacterLinked {
+        token_id: Uuid,
+        character_id: Option<Uuid>,
     },
 }

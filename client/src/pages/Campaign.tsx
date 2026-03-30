@@ -3,10 +3,14 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { mapsApi } from '../api/maps'
+import { charactersApi } from '../api/characters'
 import { wsClient } from '../api/ws'
 import { createMessageDispatcher } from '../api/dispatcher'
 import { CanvasView } from '../canvas/CanvasView'
 import { AssetBrowser } from '../components/AssetBrowser'
+import { CharacterCreateDialog } from '../components/CharacterCreateDialog'
+import { CharacterList } from '../components/CharacterList'
+import { CharacterSheet } from '../components/CharacterSheet'
 import { Toolbar } from '../components/Toolbar'
 import { LayerPanel } from '../components/LayerPanel'
 import { TokenInspector } from '../components/TokenInspector'
@@ -16,6 +20,7 @@ import { PlayersOnline } from '../components/PlayersOnline'
 import { useMapStore } from '../state/map'
 import { useTokenStore } from '../state/tokens'
 import { useDrawingStore } from '../state/drawings'
+import { useCharacterStore } from '../state/characters'
 import type { Token } from '../types/Token'
 
 interface ContextMenuState {
@@ -31,10 +36,24 @@ export function Campaign() {
   const [showMapSettings, setShowMapSettings] = useState(false)
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [createCharOpen, setCreateCharOpen] = useState(false)
 
   const loadMap = useMapStore((s) => s.loadMap)
   const loadTokens = useTokenStore((s) => s.loadTokens)
   const loadDrawings = useDrawingStore((s) => s.loadDrawings)
+  const activeCharacterId = useCharacterStore((s) => s.activeCharacterId)
+
+  // Load characters for this campaign
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    charactersApi.list(id).then((characters) => {
+      if (!cancelled) useCharacterStore.getState().loadCharacters(characters)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   // Keep a ref to selectedMapId for the reconnect callback
   const selectedMapIdRef = useRef(selectedMapId)
@@ -121,6 +140,7 @@ export function Campaign() {
         <Toolbar />
         <LayerPanel />
         <TokenInspector />
+        {activeCharacterId && <CharacterSheet />}
       </div>
 
       {/* Sidebar */}
@@ -249,6 +269,14 @@ export function Campaign() {
               Asset Library
             </button>
             <AssetBrowser campaignId={id!} open={assetBrowserOpen} onOpenChange={setAssetBrowserOpen} />
+
+            {/* Characters */}
+            <CharacterList campaignId={id!} onCreateClick={() => setCreateCharOpen(true)} />
+            <CharacterCreateDialog
+              campaignId={id!}
+              open={createCharOpen}
+              onOpenChange={setCreateCharOpen}
+            />
 
             {/* Players Online */}
             <PlayersOnline />

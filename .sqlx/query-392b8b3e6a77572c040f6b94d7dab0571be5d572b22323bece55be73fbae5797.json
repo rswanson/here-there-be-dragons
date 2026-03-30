@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT character_id, field_id, value FROM character_field_values WHERE character_id = $1 ORDER BY field_id ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "character_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "field_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "value",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "392b8b3e6a77572c040f6b94d7dab0571be5d572b22323bece55be73fbae5797"
+}

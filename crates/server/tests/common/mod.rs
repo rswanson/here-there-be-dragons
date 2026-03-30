@@ -99,6 +99,7 @@ pub async fn spawn_app() -> TestApp {
         config,
         storage: Arc::from(storage),
         session_manager,
+        game_systems: server::game_system::GameSystemRegistry::default_registry(),
     };
 
     let app = server::build_app(state);

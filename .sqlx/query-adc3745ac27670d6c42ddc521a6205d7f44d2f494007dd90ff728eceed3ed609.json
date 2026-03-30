@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM character_bonuses WHERE character_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "adc3745ac27670d6c42ddc521a6205d7f44d2f494007dd90ff728eceed3ed609"
+}

@@ -157,7 +157,6 @@ export class DrawingTools {
   // Throttled freehand point collector — ~30 Hz
   private readonly throttledFreehandMove: (world: Point) => void
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(app: Application, viewport: Viewport, _layerManager: LayerManager) {
     this.app = app
     this.viewport = viewport

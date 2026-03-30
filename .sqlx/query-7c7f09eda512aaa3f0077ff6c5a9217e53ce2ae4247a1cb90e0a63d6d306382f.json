@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM character_bonuses WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "character_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "field_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "bonus_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "value",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7c7f09eda512aaa3f0077ff6c5a9217e53ce2ae4247a1cb90e0a63d6d306382f"
+}

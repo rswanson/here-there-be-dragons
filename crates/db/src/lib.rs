@@ -1,5 +1,8 @@
 pub mod assets;
 pub mod campaigns;
+pub mod character_bonuses;
+pub mod character_fields;
+pub mod characters;
 pub mod drawings;
 pub mod map_images;
 pub mod map_layers;
