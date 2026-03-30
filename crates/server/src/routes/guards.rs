@@ -41,6 +41,26 @@ pub async fn get_campaign_id_for_layer(
     Ok(None)
 }
 
+/// Require that the user is the character's owner or a DM of the campaign.
+pub async fn require_character_owner_or_dm(
+    state: &AppState,
+    character_id: &Uuid,
+    user_id: Uuid,
+) -> Result<(Uuid, CampaignRole), AppError> {
+    let (campaign_id, owner_id) =
+        db::characters::get_character_auth_info(&state.pool, character_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+    let role = require_member(state, campaign_id, user_id).await?;
+
+    if role != CampaignRole::Dm && owner_id != user_id {
+        return Err(AppError::Forbidden);
+    }
+
+    Ok((campaign_id, role))
+}
+
 /// Resolve layer_id → map_id → campaign_id and require DM role.
 pub async fn require_dm_for_layer(
     state: &AppState,

@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 use server::config::Config;
+use server::game_system::GameSystemRegistry;
 use server::session::{InMemoryBroadcaster, SessionManager};
 use server::state::AppState;
 
@@ -43,6 +44,7 @@ async fn main() {
         config: config.clone(),
         storage: Arc::from(storage),
         session_manager,
+        game_systems: GameSystemRegistry::default_registry(),
     };
 
     let client_dir = std::env::var("CLIENT_DIR").unwrap_or_else(|_| "/srv/client".to_string());
