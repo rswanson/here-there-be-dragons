@@ -236,6 +236,24 @@ async fn handle_client_message(
             )
             .await;
         }
+        ClientMessage::SendChatMessage {
+            character_id,
+            message_type,
+            content,
+            whisper_target_ids,
+        } => {
+            handle_send_chat_message(
+                state,
+                campaign_id,
+                user_id,
+                role,
+                character_id,
+                message_type,
+                content,
+                whisper_target_ids,
+            )
+            .await;
+        }
         // CRUD messages (CreateToken, DeleteDrawing, etc.) are handled via REST.
         // JoinSession, LeaveSession, RequestFullState are WS-native but not yet
         // implemented — session join/leave is managed at connection level for now.
@@ -822,6 +840,177 @@ async fn handle_update_character_bonus(
         .session_manager
         .broadcast(campaign_id, &msg, None)
         .await;
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn handle_send_chat_message(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    _role: CampaignRole,
+    character_id: Option<Uuid>,
+    message_type: String,
+    content: String,
+    whisper_target_ids: Vec<Uuid>,
+) {
+    // Validate content is not empty
+    if content.trim().is_empty() {
+        let error = ServerMessage::Error {
+            code: "BAD_REQUEST".to_string(),
+            message: "Message content cannot be empty".to_string(),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return;
+    }
+
+    // If character_id is provided, verify it belongs to the sender
+    if let Some(char_id) = character_id {
+        match db::characters::get_character_auth_info(&state.pool, &char_id).await {
+            Ok(Some((char_campaign_id, owner_id))) => {
+                if char_campaign_id != campaign_id || owner_id != user_id {
+                    let error = ServerMessage::Error {
+                        code: "FORBIDDEN".to_string(),
+                        message: "Character does not belong to you in this campaign".to_string(),
+                    };
+                    state
+                        .session_manager
+                        .send_to(campaign_id, user_id, &error)
+                        .await;
+                    return;
+                }
+            }
+            Ok(None) => {
+                let error = ServerMessage::Error {
+                    code: "CHARACTER_NOT_FOUND".to_string(),
+                    message: format!("Character {char_id} not found"),
+                };
+                state
+                    .session_manager
+                    .send_to(campaign_id, user_id, &error)
+                    .await;
+                return;
+            }
+            Err(e) => {
+                tracing::error!("DB error checking character auth for chat: {e}");
+                let error = ServerMessage::Error {
+                    code: "INTERNAL_ERROR".to_string(),
+                    message: "Failed to validate character ownership".to_string(),
+                };
+                state
+                    .session_manager
+                    .send_to(campaign_id, user_id, &error)
+                    .await;
+                return;
+            }
+        }
+    }
+
+    // Persist the message
+    let row = match db::chat_messages::insert_message(
+        &state.pool,
+        &campaign_id,
+        &user_id,
+        character_id.as_ref(),
+        &message_type,
+        &content,
+        &whisper_target_ids,
+    )
+    .await
+    {
+        Ok(row) => row,
+        Err(e) => {
+            tracing::error!("DB error inserting chat message: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to save message".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    // Look up sender display name
+    let sender_display_name = match db::users::find_by_id(&state.pool, user_id).await {
+        Ok(Some(u)) => u.display_name,
+        Ok(None) => String::new(),
+        Err(e) => {
+            tracing::error!("DB error looking up sender display name: {e}");
+            String::new()
+        }
+    };
+
+    // Look up character name if character_id is set
+    let character_name = if let Some(char_id) = character_id {
+        match db::characters::find_by_id(&state.pool, &char_id).await {
+            Ok(Some(c)) => Some(c.name),
+            Ok(None) => None,
+            Err(e) => {
+                tracing::error!("DB error looking up character name: {e}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    // Parse message type for the struct
+    let parsed_message_type = match row.message_type.parse::<htbd_core::chat::ChatMessageType>() {
+        Ok(t) => t,
+        Err(_) => {
+            tracing::error!("Unknown message type stored: {}", row.message_type);
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to parse message type".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let chat_message = htbd_core::chat::ChatMessage {
+        id: row.id,
+        campaign_id: row.campaign_id,
+        sender_user_id: row.sender_user_id,
+        sender_display_name,
+        character_id: row.character_id,
+        character_name,
+        message_type: parsed_message_type,
+        content: row.content,
+        whisper_target_ids: row.whisper_target_ids.clone(),
+        created_at: row.created_at,
+    };
+
+    let msg = ServerMessage::ChatMessageReceived {
+        message: chat_message,
+    };
+
+    // For whispers: send to sender + each target; for non-whispers: broadcast to all
+    if message_type == "whisper" {
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &msg)
+            .await;
+        for target_id in &row.whisper_target_ids {
+            state
+                .session_manager
+                .send_to(campaign_id, *target_id, &msg)
+                .await;
+        }
+    } else {
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
 }
 
 async fn handle_link_token_to_character(

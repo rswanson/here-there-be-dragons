@@ -2,9 +2,11 @@ pub mod assets;
 pub mod auth;
 pub mod campaigns;
 pub mod characters;
+pub mod chat;
 pub mod drawings;
 pub mod game_systems;
 pub mod guards;
+pub mod handouts;
 pub mod layers;
 pub mod map_images;
 pub mod maps;
@@ -27,6 +29,8 @@ pub fn api_routes() -> Router<AppState> {
         .merge(drawings::routes())
         .merge(tokens::routes())
         .merge(characters::routes())
+        .merge(chat::routes())
+        .merge(handouts::routes())
         .merge(game_systems::routes())
         .route("/maps/{id}/state", axum::routing::get(state::get_map_state))
 }
