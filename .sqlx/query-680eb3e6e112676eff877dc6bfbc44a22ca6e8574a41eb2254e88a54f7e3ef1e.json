@@ -67,6 +67,11 @@
         "ordinal": 12,
         "name": "updated_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "character_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -89,7 +94,8 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "680eb3e6e112676eff877dc6bfbc44a22ca6e8574a41eb2254e88a54f7e3ef1e"

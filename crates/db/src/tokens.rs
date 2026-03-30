@@ -16,6 +16,7 @@ pub struct TokenRow {
     pub status_markers: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub character_id: Option<Uuid>,
 }
 
 impl From<TokenRow> for htbd_core::token::Token {
@@ -95,7 +96,7 @@ pub async fn list_for_map(pool: &PgPool, map_id: &Uuid) -> Result<Vec<TokenRow>,
         TokenRow,
         r#"SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,
                   t.x, t.y, t.size, t.rotation, t.bars_json,
-                  t.status_markers, t.created_at, t.updated_at
+                  t.status_markers, t.character_id, t.created_at, t.updated_at
            FROM tokens t
            JOIN map_layers l ON t.layer_id = l.id
            WHERE l.map_id = $1
@@ -114,7 +115,7 @@ pub async fn list_for_map_player(
         TokenRow,
         r#"SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,
                   t.x, t.y, t.size, t.rotation, t.bars_json,
-                  t.status_markers, t.created_at, t.updated_at
+                  t.status_markers, t.character_id, t.created_at, t.updated_at
            FROM tokens t
            JOIN map_layers l ON t.layer_id = l.id
            WHERE l.map_id = $1 AND l.dm_only = false

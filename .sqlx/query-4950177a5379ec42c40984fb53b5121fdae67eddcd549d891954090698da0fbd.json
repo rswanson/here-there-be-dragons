@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,\n                  t.x, t.y, t.size, t.rotation, t.bars_json,\n                  t.status_markers, t.created_at, t.updated_at\n           FROM tokens t\n           JOIN map_layers l ON t.layer_id = l.id\n           WHERE l.map_id = $1\n           ORDER BY t.created_at ASC",
+  "query": "SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,\n                  t.x, t.y, t.size, t.rotation, t.bars_json,\n                  t.status_markers, t.character_id, t.created_at, t.updated_at\n           FROM tokens t\n           JOIN map_layers l ON t.layer_id = l.id\n           WHERE l.map_id = $1\n           ORDER BY t.created_at ASC",
   "describe": {
     "columns": [
       {
@@ -60,11 +60,16 @@
       },
       {
         "ordinal": 11,
+        "name": "character_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -86,9 +91,10 @@
       false,
       false,
       false,
+      true,
       false,
       false
     ]
   },
-  "hash": "66b36df770e26959a1faff1c80109b8a7585e8d2abd4c590200af53e8686fd1e"
+  "hash": "4950177a5379ec42c40984fb53b5121fdae67eddcd549d891954090698da0fbd"
 }
