@@ -5,6 +5,7 @@ import { useTokenStore } from '../state/tokens';
 import { useDrawingStore } from '../state/drawings';
 import { usePresenceStore } from '../state/presence';
 import { useMapStore } from '../state/map';
+import { useCharacterStore } from '../state/characters';
 
 /**
  * Creates a message dispatcher that routes incoming server WebSocket messages
@@ -84,6 +85,31 @@ export function createMessageDispatcher(): (msg: ServerMessage) => void {
       }
       case 'LayersReordered': {
         useMapStore.getState().reorderLayers(msg.payload.layer_ids);
+        break;
+      }
+
+      // Character messages
+      case 'CharacterFieldsUpdated': {
+        const { character_id, fields } = msg.payload;
+        useCharacterStore.getState().handleFieldsUpdated(character_id, fields);
+        break;
+      }
+      case 'CharacterBonusAdded': {
+        const { character_id, field_id, bonus } = msg.payload;
+        useCharacterStore.getState().handleBonusAdded(character_id, field_id, bonus);
+        break;
+      }
+      case 'CharacterBonusRemoved': {
+        const { character_id, bonus_id, field_id } = msg.payload;
+        useCharacterStore.getState().handleBonusRemoved(character_id, bonus_id, field_id);
+        break;
+      }
+      case 'CharacterBonusUpdated': {
+        const { character_id, field_id, bonus } = msg.payload;
+        useCharacterStore.getState().handleBonusUpdated(character_id, field_id, bonus);
+        break;
+      }
+      case 'TokenCharacterLinked': {
         break;
       }
 
