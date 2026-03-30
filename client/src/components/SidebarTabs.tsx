@@ -163,10 +163,8 @@ export function SidebarTabs({
         </div>
       </Tabs.Content>
 
-      <Tabs.Content value="docs" style={contentStyle}>
-        <div style={{ padding: 12, color: 'var(--color-text-secondary)', fontSize: 12 }}>
-          Docs (coming soon)
-        </div>
+      <Tabs.Content value="docs" style={{ ...contentStyle, display: 'flex', flexDirection: 'column' }}>
+        <DocsTab campaignId={campaignId} />
       </Tabs.Content>
     </Tabs.Root>
   )

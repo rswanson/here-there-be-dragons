@@ -7,16 +7,12 @@ import { charactersApi } from '../api/characters'
 import { wsClient } from '../api/ws'
 import { createMessageDispatcher } from '../api/dispatcher'
 import { CanvasView } from '../canvas/CanvasView'
-import { AssetBrowser } from '../components/AssetBrowser'
-import { CharacterCreateDialog } from '../components/CharacterCreateDialog'
-import { CharacterList } from '../components/CharacterList'
-import { CharacterSheet } from '../components/CharacterSheet'
 import { Toolbar } from '../components/Toolbar'
 import { LayerPanel } from '../components/LayerPanel'
 import { TokenInspector } from '../components/TokenInspector'
 import { MapSettings } from '../components/MapSettings'
 import { TokenContextMenu } from '../components/TokenContextMenu'
-import { PlayersOnline } from '../components/PlayersOnline'
+import { SidebarTabs } from '../components/SidebarTabs'
 import { useMapStore } from '../state/map'
 import { useTokenStore } from '../state/tokens'
 import { useDrawingStore } from '../state/drawings'
@@ -36,12 +32,10 @@ export function Campaign() {
   const [showMapSettings, setShowMapSettings] = useState(false)
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
-  const [createCharOpen, setCreateCharOpen] = useState(false)
 
   const loadMap = useMapStore((s) => s.loadMap)
   const loadTokens = useTokenStore((s) => s.loadTokens)
   const loadDrawings = useDrawingStore((s) => s.loadDrawings)
-  const activeCharacterId = useCharacterStore((s) => s.activeCharacterId)
 
   // Load characters for this campaign
   useEffect(() => {
@@ -140,7 +134,6 @@ export function Campaign() {
         <Toolbar />
         <LayerPanel />
         <TokenInspector />
-        {activeCharacterId && <CharacterSheet />}
       </div>
 
       {/* Sidebar */}
@@ -152,7 +145,7 @@ export function Campaign() {
           background: 'var(--color-bg-secondary)',
           display: 'flex',
           flexDirection: 'column',
-          overflowY: 'auto',
+          overflow: 'hidden',
           borderLeft: '1px solid var(--color-border, #333)',
         }}
       >
@@ -170,117 +163,45 @@ export function Campaign() {
                   padding: 0,
                 }}
               >
-                ← Back
+                &larr; Back
               </button>
             </div>
             <MapSettings />
           </>
         ) : (
-          <div style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-            {/* Campaign info */}
-            <div>
+          <>
+            {/* Campaign header — always visible above tabs */}
+            <div
+              style={{
+                padding: 'var(--space-md)',
+                borderBottom: '1px solid var(--color-border, #333)',
+                flexShrink: 0,
+              }}
+            >
               <h2 style={{ margin: '0 0 4px' }}>{campaign.name}</h2>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+              <p
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontSize: 'var(--font-size-sm)',
+                  margin: 0,
+                }}
+              >
                 Invite code: {campaign.invite_code}
               </p>
             </div>
 
-            {/* Map selector */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label
-                  htmlFor="map-selector"
-                  style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', fontWeight: 600 }}
-                >
-                  Map
-                </label>
-                <button
-                  onClick={() => createMapMutation.mutate()}
-                  disabled={createMapMutation.isPending}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--color-border, #444)',
-                    borderRadius: 4,
-                    color: 'var(--color-text)',
-                    cursor: createMapMutation.isPending ? 'not-allowed' : 'pointer',
-                    fontSize: 11,
-                    padding: '2px 8px',
-                  }}
-                >
-                  {createMapMutation.isPending ? 'Creating…' : '+ New Map'}
-                </button>
-              </div>
-              <select
-                id="map-selector"
-                value={selectedMapId ?? ''}
-                onChange={(e) => setSelectedMapId(e.target.value || null)}
-                style={{
-                  width: '100%',
-                  padding: '6px 8px',
-                  background: 'var(--color-bg, #1a1a2e)',
-                  border: '1px solid var(--color-border, #444)',
-                  borderRadius: 4,
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--font-size-sm)',
-                }}
-              >
-                <option value="">— Select a map —</option>
-                {maps?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Map Settings button (DM only — always show for now) */}
-            {selectedMapId && (
-              <button
-                onClick={() => setShowMapSettings(true)}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--color-border, #444)',
-                  borderRadius: 4,
-                  color: 'var(--color-text)',
-                  cursor: 'pointer',
-                  fontSize: 'var(--font-size-sm)',
-                  padding: '6px 12px',
-                  textAlign: 'left',
-                }}
-              >
-                ⚙ Map Settings
-              </button>
-            )}
-
-            {/* Asset Library */}
-            <button
-              onClick={() => setAssetBrowserOpen(true)}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--color-border, #444)',
-                borderRadius: 4,
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-                fontSize: 'var(--font-size-sm)',
-                padding: '6px 12px',
-                textAlign: 'left',
-              }}
-            >
-              Asset Library
-            </button>
-            <AssetBrowser campaignId={id!} open={assetBrowserOpen} onOpenChange={setAssetBrowserOpen} />
-
-            {/* Characters */}
-            <CharacterList campaignId={id!} onCreateClick={() => setCreateCharOpen(true)} />
-            <CharacterCreateDialog
+            <SidebarTabs
               campaignId={id!}
-              open={createCharOpen}
-              onOpenChange={setCreateCharOpen}
+              maps={maps}
+              selectedMapId={selectedMapId}
+              onMapSelect={setSelectedMapId}
+              onCreateMap={() => createMapMutation.mutate()}
+              isCreatingMap={createMapMutation.isPending}
+              onShowMapSettings={() => setShowMapSettings(true)}
+              assetBrowserOpen={assetBrowserOpen}
+              onAssetBrowserOpenChange={setAssetBrowserOpen}
             />
-
-            {/* Players Online */}
-            <PlayersOnline />
-          </div>
+          </>
         )}
       </aside>
 
