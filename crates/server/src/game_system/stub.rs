@@ -150,13 +150,13 @@ impl GameSystem for StubGameSystem {
     fn validate_fields(&self, fields: &FieldValues) -> Vec<ValidationError> {
         let mut errors = Vec::new();
 
-        if let Some(level) = fields.get("level").and_then(|v| v.as_i64()) {
-            if !(1..=20).contains(&level) {
-                errors.push(ValidationError {
-                    field_id: "level".to_string(),
-                    message: "Level must be between 1 and 20".to_string(),
-                });
-            }
+        if let Some(level) = fields.get("level").and_then(|v| v.as_i64())
+            && !(1..=20).contains(&level)
+        {
+            errors.push(ValidationError {
+                field_id: "level".to_string(),
+                message: "Level must be between 1 and 20".to_string(),
+            });
         }
 
         errors
