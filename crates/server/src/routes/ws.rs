@@ -254,6 +254,59 @@ async fn handle_client_message(
             )
             .await;
         }
+        ClientMessage::StartEncounter { combatants } => {
+            handle_start_encounter(state, campaign_id, user_id, role, combatants).await;
+        }
+        ClientMessage::AddCombatant {
+            encounter_id,
+            character_id,
+            name,
+            initiative_value,
+        } => {
+            handle_add_combatant(
+                state,
+                campaign_id,
+                user_id,
+                role,
+                encounter_id,
+                character_id,
+                name,
+                initiative_value,
+            )
+            .await;
+        }
+        ClientMessage::RemoveCombatant { combatant_id } => {
+            handle_remove_combatant(state, campaign_id, user_id, role, combatant_id).await;
+        }
+        ClientMessage::UpdateCombatantInitiative {
+            combatant_id,
+            initiative_value,
+        } => {
+            handle_update_combatant_initiative(
+                state,
+                campaign_id,
+                user_id,
+                role,
+                combatant_id,
+                initiative_value,
+            )
+            .await;
+        }
+        ClientMessage::RollAllInitiative { encounter_id } => {
+            handle_roll_all_initiative(state, campaign_id, user_id, role, encounter_id).await;
+        }
+        ClientMessage::RollCombatantInitiative { combatant_id } => {
+            handle_roll_combatant_initiative(state, campaign_id, user_id, role, combatant_id).await;
+        }
+        ClientMessage::NextTurn { encounter_id } => {
+            handle_next_turn(state, campaign_id, user_id, role, encounter_id).await;
+        }
+        ClientMessage::PreviousTurn { encounter_id } => {
+            handle_previous_turn(state, campaign_id, user_id, role, encounter_id).await;
+        }
+        ClientMessage::EndEncounter { encounter_id } => {
+            handle_end_encounter(state, campaign_id, user_id, role, encounter_id).await;
+        }
         // CRUD messages (CreateToken, DeleteDrawing, etc.) are handled via REST.
         // JoinSession, LeaveSession, RequestFullState are WS-native but not yet
         // implemented — session join/leave is managed at connection level for now.
@@ -1011,6 +1064,888 @@ async fn handle_send_chat_message(
             .broadcast(campaign_id, &msg, None)
             .await;
     }
+}
+
+/// Returns `true` if the user is a DM; otherwise sends FORBIDDEN error and returns `false`.
+async fn require_dm(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    action: &str,
+) -> bool {
+    if role != CampaignRole::Dm {
+        let error = ServerMessage::Error {
+            code: "FORBIDDEN".to_string(),
+            message: format!("Only the DM can {action}"),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return false;
+    }
+    true
+}
+
+async fn handle_start_encounter(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    combatants: Vec<htbd_core::initiative::NewCombatant>,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "start an encounter").await {
+        return;
+    }
+
+    // Deactivate any existing active encounter
+    match db::initiative::get_active_encounter(&state.pool, &campaign_id).await {
+        Ok(Some(existing)) => {
+            if let Err(e) = db::initiative::deactivate_encounter(&state.pool, &existing.id).await {
+                tracing::error!("Failed to deactivate existing encounter: {e}");
+                let error = ServerMessage::Error {
+                    code: "INTERNAL_ERROR".to_string(),
+                    message: "Failed to end existing encounter".to_string(),
+                };
+                state
+                    .session_manager
+                    .send_to(campaign_id, user_id, &error)
+                    .await;
+                return;
+            }
+        }
+        Ok(None) => {}
+        Err(e) => {
+            tracing::error!("DB error checking active encounter: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to check for existing encounter".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    }
+
+    // Create new encounter
+    let enc_row = match db::initiative::create_encounter(&state.pool, &campaign_id).await {
+        Ok(row) => row,
+        Err(e) => {
+            tracing::error!("DB error creating encounter: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to create encounter".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    // Add each combatant
+    for (idx, c) in combatants.iter().enumerate() {
+        if let Err(e) = db::initiative::add_combatant(
+            &state.pool,
+            &enc_row.id,
+            c.character_id.as_ref(),
+            &c.name,
+            c.initiative_value,
+            idx as i32,
+        )
+        .await
+        {
+            tracing::error!("DB error adding combatant: {e}");
+        }
+    }
+
+    // Load all combatants
+    let combatant_rows = match db::initiative::list_combatants(&state.pool, &enc_row.id).await {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("DB error loading combatants: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to load encounter combatants".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let encounter = db::initiative::rows_to_encounter(enc_row, combatant_rows);
+    let msg = ServerMessage::EncounterStarted { encounter };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn handle_add_combatant(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    encounter_id: Uuid,
+    character_id: Option<Uuid>,
+    name: String,
+    initiative_value: i32,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "add a combatant").await {
+        return;
+    }
+
+    // Verify encounter exists and belongs to this campaign
+    let enc = match db::initiative::get_active_encounter(&state.pool, &campaign_id).await {
+        Ok(Some(e)) if e.id == encounter_id => e,
+        Ok(_) => {
+            let error = ServerMessage::Error {
+                code: "ENCOUNTER_NOT_FOUND".to_string(),
+                message: format!("Active encounter {encounter_id} not found for this campaign"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error looking up encounter: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to verify encounter".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    // Get current combatant count for sort_order
+    let current_count = match db::initiative::list_combatants(&state.pool, &enc.id).await {
+        Ok(rows) => rows.len() as i32,
+        Err(e) => {
+            tracing::error!("DB error counting combatants: {e}");
+            0
+        }
+    };
+
+    let row = match db::initiative::add_combatant(
+        &state.pool,
+        &encounter_id,
+        character_id.as_ref(),
+        &name,
+        initiative_value,
+        current_count,
+    )
+    .await
+    {
+        Ok(row) => row,
+        Err(e) => {
+            tracing::error!("DB error adding combatant: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to add combatant".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let combatant = db::initiative::row_to_combatant(row);
+    let msg = ServerMessage::CombatantAdded { combatant };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+}
+
+async fn handle_remove_combatant(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    combatant_id: Uuid,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "remove a combatant").await {
+        return;
+    }
+
+    // Verify combatant's encounter belongs to this campaign
+    let enc_id = match db::initiative::get_combatant_encounter_id(&state.pool, &combatant_id).await
+    {
+        Ok(Some(id)) => id,
+        Ok(None) => {
+            let error = ServerMessage::Error {
+                code: "COMBATANT_NOT_FOUND".to_string(),
+                message: format!("Combatant {combatant_id} not found"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error finding combatant: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to verify combatant".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    // Verify that the encounter belongs to this campaign
+    match db::initiative::get_active_encounter(&state.pool, &campaign_id).await {
+        Ok(Some(enc)) if enc.id == enc_id => {}
+        Ok(_) => {
+            let error = ServerMessage::Error {
+                code: "FORBIDDEN".to_string(),
+                message: "Combatant does not belong to an active encounter in this campaign"
+                    .to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error verifying encounter: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to verify encounter ownership".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    }
+
+    match db::initiative::remove_combatant(&state.pool, &combatant_id).await {
+        Ok(true) => {
+            let msg = ServerMessage::CombatantRemoved { combatant_id };
+            state
+                .session_manager
+                .broadcast(campaign_id, &msg, None)
+                .await;
+        }
+        Ok(false) => {
+            let error = ServerMessage::Error {
+                code: "COMBATANT_NOT_FOUND".to_string(),
+                message: format!("Combatant {combatant_id} not found during delete"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+        }
+        Err(e) => {
+            tracing::error!("DB error removing combatant: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to remove combatant".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+        }
+    }
+}
+
+async fn handle_update_combatant_initiative(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    combatant_id: Uuid,
+    initiative_value: i32,
+) {
+    if !require_dm(
+        state,
+        campaign_id,
+        user_id,
+        role,
+        "update combatant initiative",
+    )
+    .await
+    {
+        return;
+    }
+
+    // Fetch current combatant to preserve sort_order
+    let existing = match db::initiative::find_combatant_by_id(&state.pool, &combatant_id).await {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            let error = ServerMessage::Error {
+                code: "COMBATANT_NOT_FOUND".to_string(),
+                message: format!("Combatant {combatant_id} not found"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error finding combatant: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to find combatant".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    match db::initiative::update_combatant_initiative(
+        &state.pool,
+        &combatant_id,
+        initiative_value,
+        existing.sort_order,
+    )
+    .await
+    {
+        Ok(Some(updated)) => {
+            let msg = ServerMessage::CombatantInitiativeUpdated {
+                combatant_id,
+                initiative_value: updated.initiative_value,
+                sort_order: updated.sort_order,
+            };
+            state
+                .session_manager
+                .broadcast(campaign_id, &msg, None)
+                .await;
+        }
+        Ok(None) => {
+            let error = ServerMessage::Error {
+                code: "COMBATANT_NOT_FOUND".to_string(),
+                message: format!("Combatant {combatant_id} not found during update"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+        }
+        Err(e) => {
+            tracing::error!("DB error updating combatant initiative: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to update combatant initiative".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+        }
+    }
+}
+
+/// Get the initiative modifier for a character from its fields and game system.
+/// Returns 0 if the character, system, or tiebreaker field cannot be found.
+async fn get_initiative_modifier(state: &AppState, character_id: &Uuid) -> i32 {
+    let character = match db::characters::find_by_id(&state.pool, character_id).await {
+        Ok(Some(c)) => c,
+        _ => return 0,
+    };
+
+    let system = match state.game_systems.get(&character.game_system_id) {
+        Some(s) => s,
+        None => return 0,
+    };
+
+    let rules = system.initiative_rules();
+    let tiebreaker_field = match rules.tiebreaker_field {
+        Some(f) => f,
+        None => return 0,
+    };
+
+    let field_rows = match db::character_fields::get_all_fields(&state.pool, character_id).await {
+        Ok(rows) => rows,
+        Err(_) => return 0,
+    };
+    let fields = db::character_fields::rows_to_map(field_rows);
+
+    fields
+        .get(&tiebreaker_field)
+        .and_then(|v| v.as_i64())
+        .map(|n| n as i32)
+        .unwrap_or(0)
+}
+
+async fn handle_roll_all_initiative(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    encounter_id: Uuid,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "roll initiative").await {
+        return;
+    }
+
+    // Load combatants
+    let combatant_rows = match db::initiative::list_combatants(&state.pool, &encounter_id).await {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("DB error loading combatants for roll-all: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to load combatants".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    // Roll initiative for each combatant (character-linked ones use game system)
+    let mut combatants_with_values: Vec<(db::initiative::CombatantRow, i32)> = Vec::new();
+    for row in combatant_rows {
+        let rolled_value = if let Some(ref char_id) = row.character_id {
+            let character = db::characters::find_by_id(&state.pool, char_id).await;
+            if let Ok(Some(ref c)) = character {
+                if let Some(system) = state.game_systems.get(&c.game_system_id) {
+                    let rules = system.initiative_rules();
+                    let modifier = get_initiative_modifier(state, char_id).await;
+                    htbd_core::initiative::roll_initiative(&rules.roll_expression, modifier)
+                        .unwrap_or(row.initiative_value)
+                } else {
+                    row.initiative_value
+                }
+            } else {
+                row.initiative_value
+            }
+        } else {
+            row.initiative_value
+        };
+        combatants_with_values.push((row, rolled_value));
+    }
+
+    // Sort by initiative_value descending
+    combatants_with_values.sort_by(|a, b| b.1.cmp(&a.1));
+
+    // Persist updated values and sort_orders
+    let mut final_combatants = Vec::new();
+    for (sort_order, (row, new_value)) in combatants_with_values.into_iter().enumerate() {
+        match db::initiative::update_combatant_initiative(
+            &state.pool,
+            &row.id,
+            new_value,
+            sort_order as i32,
+        )
+        .await
+        {
+            Ok(Some(updated)) => {
+                final_combatants.push(db::initiative::row_to_combatant(updated));
+            }
+            Ok(None) => {
+                tracing::warn!("Combatant {} disappeared during roll-all", row.id);
+            }
+            Err(e) => {
+                tracing::error!("DB error persisting initiative roll for {}: {e}", row.id);
+                // Use stale row as fallback
+                final_combatants.push(db::initiative::row_to_combatant(row));
+            }
+        }
+    }
+
+    let msg = ServerMessage::AllInitiativeRolled {
+        combatants: final_combatants,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+}
+
+async fn handle_roll_combatant_initiative(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    combatant_id: Uuid,
+) {
+    if !require_dm(
+        state,
+        campaign_id,
+        user_id,
+        role,
+        "roll combatant initiative",
+    )
+    .await
+    {
+        return;
+    }
+
+    let row = match db::initiative::find_combatant_by_id(&state.pool, &combatant_id).await {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            let error = ServerMessage::Error {
+                code: "COMBATANT_NOT_FOUND".to_string(),
+                message: format!("Combatant {combatant_id} not found"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error finding combatant: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to find combatant".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let new_value = if let Some(ref char_id) = row.character_id {
+        let character = db::characters::find_by_id(&state.pool, char_id).await;
+        if let Ok(Some(ref c)) = character {
+            if let Some(system) = state.game_systems.get(&c.game_system_id) {
+                let rules = system.initiative_rules();
+                let modifier = get_initiative_modifier(state, char_id).await;
+                htbd_core::initiative::roll_initiative(&rules.roll_expression, modifier)
+                    .unwrap_or(row.initiative_value)
+            } else {
+                row.initiative_value
+            }
+        } else {
+            row.initiative_value
+        }
+    } else {
+        row.initiative_value
+    };
+
+    match db::initiative::update_combatant_initiative(
+        &state.pool,
+        &combatant_id,
+        new_value,
+        row.sort_order,
+    )
+    .await
+    {
+        Ok(Some(updated)) => {
+            let msg = ServerMessage::CombatantInitiativeUpdated {
+                combatant_id,
+                initiative_value: updated.initiative_value,
+                sort_order: updated.sort_order,
+            };
+            state
+                .session_manager
+                .broadcast(campaign_id, &msg, None)
+                .await;
+        }
+        Ok(None) => {
+            let error = ServerMessage::Error {
+                code: "COMBATANT_NOT_FOUND".to_string(),
+                message: format!("Combatant {combatant_id} not found during update"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+        }
+        Err(e) => {
+            tracing::error!("DB error updating combatant initiative: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to update combatant initiative".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+        }
+    }
+}
+
+async fn handle_next_turn(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    encounter_id: Uuid,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "advance the turn").await {
+        return;
+    }
+
+    // Load encounter
+    let enc = match db::initiative::get_active_encounter(&state.pool, &campaign_id).await {
+        Ok(Some(e)) if e.id == encounter_id => e,
+        Ok(_) => {
+            let error = ServerMessage::Error {
+                code: "ENCOUNTER_NOT_FOUND".to_string(),
+                message: format!("Active encounter {encounter_id} not found"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error loading encounter: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to load encounter".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let combatants = match db::initiative::list_combatants(&state.pool, &encounter_id).await {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("DB error loading combatants: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to load combatants".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let active_indices: Vec<usize> = combatants
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.is_active)
+        .map(|(i, _)| i)
+        .collect();
+
+    if active_indices.is_empty() {
+        let error = ServerMessage::Error {
+            code: "NO_ACTIVE_COMBATANTS".to_string(),
+            message: "No active combatants in encounter".to_string(),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return;
+    }
+
+    let current = enc.current_turn_index as usize;
+    // Find next active combatant after current
+    let next_active = active_indices.iter().find(|&&i| i > current).copied();
+
+    let (new_turn_index, new_round) = if let Some(next) = next_active {
+        (next as i32, enc.round_number)
+    } else {
+        // Wrap around: new round, start at first active
+        (active_indices[0] as i32, enc.round_number + 1)
+    };
+
+    if let Err(e) =
+        db::initiative::update_encounter_turn(&state.pool, &encounter_id, new_turn_index, new_round)
+            .await
+    {
+        tracing::error!("DB error updating encounter turn: {e}");
+        let error = ServerMessage::Error {
+            code: "INTERNAL_ERROR".to_string(),
+            message: "Failed to advance turn".to_string(),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return;
+    }
+
+    let msg = ServerMessage::TurnAdvanced {
+        current_turn_index: new_turn_index,
+        round_number: new_round,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+}
+
+async fn handle_previous_turn(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    encounter_id: Uuid,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "go to previous turn").await {
+        return;
+    }
+
+    // Load encounter
+    let enc = match db::initiative::get_active_encounter(&state.pool, &campaign_id).await {
+        Ok(Some(e)) if e.id == encounter_id => e,
+        Ok(_) => {
+            let error = ServerMessage::Error {
+                code: "ENCOUNTER_NOT_FOUND".to_string(),
+                message: format!("Active encounter {encounter_id} not found"),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+        Err(e) => {
+            tracing::error!("DB error loading encounter: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to load encounter".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let combatants = match db::initiative::list_combatants(&state.pool, &encounter_id).await {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("DB error loading combatants: {e}");
+            let error = ServerMessage::Error {
+                code: "INTERNAL_ERROR".to_string(),
+                message: "Failed to load combatants".to_string(),
+            };
+            state
+                .session_manager
+                .send_to(campaign_id, user_id, &error)
+                .await;
+            return;
+        }
+    };
+
+    let active_indices: Vec<usize> = combatants
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.is_active)
+        .map(|(i, _)| i)
+        .collect();
+
+    if active_indices.is_empty() {
+        let error = ServerMessage::Error {
+            code: "NO_ACTIVE_COMBATANTS".to_string(),
+            message: "No active combatants in encounter".to_string(),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return;
+    }
+
+    let current = enc.current_turn_index as usize;
+    // Find previous active combatant before current
+    let prev_active = active_indices.iter().rev().find(|&&i| i < current).copied();
+
+    let (new_turn_index, new_round) = if let Some(prev) = prev_active {
+        (prev as i32, enc.round_number)
+    } else if enc.round_number > 1 {
+        // Go back a round: land on last active combatant of previous round
+        (*active_indices.last().unwrap() as i32, enc.round_number - 1)
+    } else {
+        // Already at the very start: stay put
+        (enc.current_turn_index, enc.round_number)
+    };
+
+    if let Err(e) =
+        db::initiative::update_encounter_turn(&state.pool, &encounter_id, new_turn_index, new_round)
+            .await
+    {
+        tracing::error!("DB error updating encounter turn: {e}");
+        let error = ServerMessage::Error {
+            code: "INTERNAL_ERROR".to_string(),
+            message: "Failed to go to previous turn".to_string(),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return;
+    }
+
+    let msg = ServerMessage::TurnAdvanced {
+        current_turn_index: new_turn_index,
+        round_number: new_round,
+    };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
+}
+
+async fn handle_end_encounter(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    encounter_id: Uuid,
+) {
+    if !require_dm(state, campaign_id, user_id, role, "end an encounter").await {
+        return;
+    }
+
+    if let Err(e) = db::initiative::deactivate_encounter(&state.pool, &encounter_id).await {
+        tracing::error!("DB error ending encounter: {e}");
+        let error = ServerMessage::Error {
+            code: "INTERNAL_ERROR".to_string(),
+            message: "Failed to end encounter".to_string(),
+        };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &error)
+            .await;
+        return;
+    }
+
+    let msg = ServerMessage::EncounterEnded { encounter_id };
+    state
+        .session_manager
+        .broadcast(campaign_id, &msg, None)
+        .await;
 }
 
 async fn handle_link_token_to_character(
