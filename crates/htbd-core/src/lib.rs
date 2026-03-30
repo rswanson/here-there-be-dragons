@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod character;
 pub mod drawing;
 pub mod game_system;
 pub mod map;
@@ -64,5 +65,26 @@ mod tests {
         drawing::DrawingType::export_all(&cfg).unwrap();
         drawing::CreateDrawingRequest::export_all(&cfg).unwrap();
         drawing::UpdateDrawingRequest::export_all(&cfg).unwrap();
+
+        // Game system
+        game_system::SheetSchema::export_all(&cfg).unwrap();
+        game_system::SheetSection::export_all(&cfg).unwrap();
+        game_system::SectionLayout::export_all(&cfg).unwrap();
+        game_system::FieldDef::export_all(&cfg).unwrap();
+        game_system::FieldType::export_all(&cfg).unwrap();
+        game_system::ChoiceOption::export_all(&cfg).unwrap();
+        game_system::WidthHint::export_all(&cfg).unwrap();
+        game_system::BonusTypeDef::export_all(&cfg).unwrap();
+        game_system::BonusEntry::export_all(&cfg).unwrap();
+        game_system::GameSystemInfo::export_all(&cfg).unwrap();
+        game_system::FieldVisibility::export_all(&cfg).unwrap();
+
+        // Character
+        character::Character::export_all(&cfg).unwrap();
+        character::CreateCharacterRequest::export_all(&cfg).unwrap();
+        character::UpdateCharacterRequest::export_all(&cfg).unwrap();
+        character::CharacterExport::export_all(&cfg).unwrap();
+        character::AddBonusRequest::export_all(&cfg).unwrap();
+        character::UpdateBonusRequest::export_all(&cfg).unwrap();
     }
 }
