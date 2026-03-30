@@ -6,8 +6,17 @@ import { registerAndLogin, createCampaign, navigateToCampaign } from './helpers'
 // ---------------------------------------------------------------------------
 
 /**
+ * Switch to the Chars tab in the sidebar.
+ */
+async function switchToCharsTab(page: Page): Promise<void> {
+  await page.getByRole('tab', { name: 'Chars' }).click()
+  await page.waitForTimeout(300)
+}
+
+/**
  * Open the character create dialog and create a character with the given name.
  * After creation, the character is automatically set as active (sheet opens).
+ * Assumes the Chars tab is active.
  */
 async function createCharacter(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: '+ New', exact: true }).click()
@@ -32,10 +41,14 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-create-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Create Test')
     await navigateToCampaign(page, 'Character Create Test')
+    await switchToCharsTab(page)
 
     await expect(page.getByText('No characters yet.')).toBeVisible({ timeout: 5_000 })
 
     await createCharacter(page, 'Aragorn')
+
+    // After creation, the sheet opens (replacing the list). Go back to list.
+    await page.getByRole('button', { name: /back to list/i }).click()
 
     await expect(page.getByRole('button', { name: 'Aragorn', exact: false })).toBeVisible({
       timeout: 5_000,
@@ -47,9 +60,13 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-list-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character List Test')
     await navigateToCampaign(page, 'Character List Test')
+    await switchToCharsTab(page)
 
     await createCharacter(page, 'Legolas')
+    // Go back to list to create another
+    await page.getByRole('button', { name: /back to list/i }).click()
     await createCharacter(page, 'Gimli')
+    await page.getByRole('button', { name: /back to list/i }).click()
 
     await expect(page.getByRole('button', { name: 'Legolas', exact: false })).toBeVisible({
       timeout: 5_000,
@@ -64,6 +81,7 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-sheet-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Sheet Open Test')
     await navigateToCampaign(page, 'Character Sheet Open Test')
+    await switchToCharsTab(page)
 
     // Creating a character automatically opens its sheet
     await createCharacter(page, 'Gandalf')
@@ -79,6 +97,7 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-field-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Field Edit Test')
     await navigateToCampaign(page, 'Character Field Edit Test')
+    await switchToCharsTab(page)
 
     // Creating opens the sheet automatically
     await createCharacter(page, 'Frodo')
@@ -109,6 +128,7 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-persist-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Persist Test')
     await navigateToCampaign(page, 'Character Persist Test')
+    await switchToCharsTab(page)
 
     // Creating opens the sheet automatically
     await createCharacter(page, 'Boromir')
@@ -130,7 +150,8 @@ test.describe('Character System', () => {
     await page.reload()
     await expect(page).toHaveURL(/\/campaigns\//, { timeout: 10_000 })
 
-    // Click the character to re-open the sheet (after reload, no character is active)
+    // Switch to Chars tab and click the character to re-open the sheet
+    await switchToCharsTab(page)
     await expect(
       page.getByRole('button', { name: 'Boromir', exact: false }),
     ).toBeVisible({ timeout: 5_000 })
