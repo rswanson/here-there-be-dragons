@@ -15,6 +15,7 @@ export function CharacterSheet() {
   const character = characters.find((c) => c.id === activeCharacterId) ?? null
   const schema = character ? schemas[character.game_system_id] : null
 
+
   // Fetch schema if not cached
   useEffect(() => {
     if (!character) return
@@ -186,17 +187,17 @@ export function CharacterSheet() {
       {/* Sections */}
       {schema ? (
         schema.sections.map((section) => (
-          <SheetSection
-            key={section.id}
-            section={section}
-            fields={character.fields as Record<string, unknown>}
-            bonuses={character.bonuses as Record<string, Array<import('../types/BonusEntry').BonusEntry>>}
-            bonusTypes={schema.bonus_types}
-            onChange={handleFieldChange}
-            onAddBonus={handleAddBonus}
-            onRemoveBonus={handleRemoveBonus}
-            onUpdateBonus={handleUpdateBonus}
-          />
+            <SheetSection
+              key={section.id}
+              section={section}
+              fields={character.fields as Record<string, unknown>}
+              bonuses={character.bonuses as Record<string, Array<import('../types/BonusEntry').BonusEntry>>}
+              bonusTypes={schema.bonus_types}
+              onChange={handleFieldChange}
+              onAddBonus={handleAddBonus}
+              onRemoveBonus={handleRemoveBonus}
+              onUpdateBonus={handleUpdateBonus}
+            />
         ))
       ) : (
         <div style={{ color: 'var(--color-text-secondary)', fontSize: 11, textAlign: 'center', padding: 20 }}>

@@ -7,21 +7,16 @@ import { registerAndLogin, createCampaign, navigateToCampaign } from './helpers'
 
 /**
  * Open the character create dialog and create a character with the given name.
- * Assumes the page is already on the campaign view.
+ * After creation, the character is automatically set as active (sheet opens).
  */
 async function createCharacter(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: '+ New', exact: true }).click()
-  // Wait for the dialog to open
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 })
-  // Wait for game systems to load (the select should have a real option, not "Loading...")
   await expect(page.locator('#char-game-system option:not([value=""])')).toBeAttached({
     timeout: 5_000,
   })
-  // Fill in character name
   await page.locator('#char-name').fill(name)
-  // Submit
   await page.getByRole('button', { name: 'Create' }).click()
-  // Dialog should close
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 })
 }
 
@@ -38,13 +33,10 @@ test.describe('Character System', () => {
     await createCampaign(page, 'Character Create Test')
     await navigateToCampaign(page, 'Character Create Test')
 
-    // The character list should show no characters initially
     await expect(page.getByText('No characters yet.')).toBeVisible({ timeout: 5_000 })
 
-    // Create a character
     await createCharacter(page, 'Aragorn')
 
-    // The character should now appear in the list
     await expect(page.getByRole('button', { name: 'Aragorn', exact: false })).toBeVisible({
       timeout: 5_000,
     })
@@ -56,11 +48,9 @@ test.describe('Character System', () => {
     await createCampaign(page, 'Character List Test')
     await navigateToCampaign(page, 'Character List Test')
 
-    // Create two characters
     await createCharacter(page, 'Legolas')
     await createCharacter(page, 'Gimli')
 
-    // Both should appear in the list
     await expect(page.getByRole('button', { name: 'Legolas', exact: false })).toBeVisible({
       timeout: 5_000,
     })
@@ -69,19 +59,16 @@ test.describe('Character System', () => {
     })
   })
 
-  test('character sheet opens on click', async ({ page }) => {
+  test('character sheet opens after creation', async ({ page }) => {
     const ts = Date.now()
     await registerAndLogin(page, `e2e-char-sheet-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Sheet Open Test')
     await navigateToCampaign(page, 'Character Sheet Open Test')
 
-    // Create a character
+    // Creating a character automatically opens its sheet
     await createCharacter(page, 'Gandalf')
 
-    // Click the character in the list — it uses role="button"
-    await page.getByRole('button', { name: 'Gandalf', exact: false }).click()
-
-    // The character sheet panel should show a text input containing the character name
+    // The sheet should be visible with the character name in the header input
     const nameInput = page.locator('input[type="text"]').first()
     await expect(nameInput).toBeVisible({ timeout: 5_000 })
     await expect(nameInput).toHaveValue('Gandalf', { timeout: 5_000 })
@@ -93,12 +80,9 @@ test.describe('Character System', () => {
     await createCampaign(page, 'Character Field Edit Test')
     await navigateToCampaign(page, 'Character Field Edit Test')
 
+    // Creating opens the sheet automatically
     await createCharacter(page, 'Frodo')
 
-    // Open the character sheet by clicking the character in the list
-    await page.getByRole('button', { name: 'Frodo', exact: false }).click()
-
-    // The sheet renders a header input with the character name
     const nameInput = page.locator('input[type="text"]').first()
     await expect(nameInput).toBeVisible({ timeout: 5_000 })
     await expect(nameInput).toHaveValue('Frodo', { timeout: 5_000 })
@@ -109,12 +93,9 @@ test.describe('Character System', () => {
 
     if (strengthVisible) {
       await strengthInput.fill('18')
-      // Wait for debounce (300 ms) + server roundtrip
       await page.waitForTimeout(800)
-      // Value should still be 18
       await expect(strengthInput).toHaveValue('18')
     } else {
-      // Edit the name field (debounced WS send for __name__)
       await nameInput.fill('Frodo Baggins')
       await page.waitForTimeout(800)
       await expect(nameInput).toHaveValue('Frodo Baggins')
@@ -129,28 +110,36 @@ test.describe('Character System', () => {
     await createCampaign(page, 'Character Persist Test')
     await navigateToCampaign(page, 'Character Persist Test')
 
+    // Creating opens the sheet automatically
     await createCharacter(page, 'Boromir')
 
-    // Open the sheet
-    await page.getByRole('button', { name: 'Boromir', exact: false }).click()
     const nameInput = page.locator('input[type="text"]').first()
     await expect(nameInput).toBeVisible({ timeout: 5_000 })
-    await expect(nameInput).toHaveValue('Boromir', { timeout: 5_000 })
 
-    // Edit the name (always available, debounced WS UpdateCharacterFields)
-    await nameInput.fill('Boromir of Gondor')
-    // Wait for debounce + server roundtrip to persist the value
+    // Edit a numeric field (persisted via WS → server → DB)
+    const numberInput = page.locator('input[type="number"]').first()
+    await expect(numberInput).toBeVisible({ timeout: 5_000 })
+    const originalValue = await numberInput.inputValue()
+    const newValue = originalValue === '18' ? '16' : '18'
+
+    await numberInput.fill(newValue)
+    // Wait for debounce (300ms) + server roundtrip
     await page.waitForTimeout(1_500)
 
-    // Reload the page — the server should return the updated name
+    // Reload the page
     await page.reload()
-
-    // Navigate back into the campaign (reload lands on the same URL)
     await expect(page).toHaveURL(/\/campaigns\//, { timeout: 10_000 })
 
-    // The character should still appear in the list with its new name
+    // Click the character to re-open the sheet (after reload, no character is active)
     await expect(
-      page.getByRole('button', { name: 'Boromir of Gondor', exact: false }),
+      page.getByRole('button', { name: 'Boromir', exact: false }),
     ).toBeVisible({ timeout: 5_000 })
+    // Character list button is a toggle — click to open sheet
+    await page.getByRole('button', { name: 'Boromir', exact: false }).click()
+
+    // Verify the numeric field still has the edited value
+    const reloadedInput = page.locator('input[type="number"]').first()
+    await expect(reloadedInput).toBeVisible({ timeout: 5_000 })
+    await expect(reloadedInput).toHaveValue(newValue, { timeout: 5_000 })
   })
 })
