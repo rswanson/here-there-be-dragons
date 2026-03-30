@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod drawing;
+pub mod game_system;
 pub mod map;
 pub mod messages;
 pub mod models;
