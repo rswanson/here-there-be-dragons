@@ -1,6 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useHandoutStore } from '../handouts'
 import type { Handout } from '../../types/Handout'
+import type { HandoutSummary } from '../../types/HandoutSummary'
+
+const makeSummary = (overrides: Partial<HandoutSummary> = {}): HandoutSummary => ({
+  id: 'handout-1',
+  title: 'The Ancient Map',
+  visibility: 'everyone',
+  player_ids: [],
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+})
 
 const makeHandout = (overrides: Partial<Handout> = {}): Handout => ({
   id: 'handout-1',
@@ -28,52 +38,52 @@ describe('useHandoutStore', () => {
 
   it('loadHandouts replaces the list', () => {
     const handouts = [
-      makeHandout(),
-      makeHandout({ id: 'handout-2', title: 'Secret Letter' }),
+      makeSummary(),
+      makeSummary({ id: 'handout-2', title: 'Secret Letter' }),
     ]
     useHandoutStore.getState().loadHandouts(handouts)
     expect(useHandoutStore.getState().handouts).toHaveLength(2)
   })
 
   it('handleHandoutCreated adds a new handout', () => {
-    useHandoutStore.getState().handleHandoutCreated(makeHandout())
+    useHandoutStore.getState().handleHandoutCreated(makeSummary())
     expect(useHandoutStore.getState().handouts).toHaveLength(1)
   })
 
   it('handleHandoutCreated does not duplicate', () => {
-    const handout = makeHandout()
-    useHandoutStore.getState().handleHandoutCreated(handout)
-    useHandoutStore.getState().handleHandoutCreated(handout)
+    const summary = makeSummary()
+    useHandoutStore.getState().handleHandoutCreated(summary)
+    useHandoutStore.getState().handleHandoutCreated(summary)
     expect(useHandoutStore.getState().handouts).toHaveLength(1)
   })
 
   it('handleHandoutUpdated replaces the matching handout', () => {
-    useHandoutStore.getState().loadHandouts([makeHandout()])
-    const updated = makeHandout({ title: 'Updated Title', content: 'New content' })
+    useHandoutStore.getState().loadHandouts([makeSummary()])
+    const updated = makeSummary({ title: 'Updated Title' })
     useHandoutStore.getState().handleHandoutUpdated(updated)
     const h = useHandoutStore.getState().handouts[0]
     expect(h.title).toBe('Updated Title')
-    expect(h.content).toBe('New content')
   })
 
   it('handleHandoutUpdated updates activeHandout if it matches', () => {
+    const summary = makeSummary()
     const handout = makeHandout()
-    useHandoutStore.getState().loadHandouts([handout])
+    useHandoutStore.getState().loadHandouts([summary])
     useHandoutStore.getState().setActiveHandout(handout)
-    const updated = makeHandout({ title: 'Active Updated' })
+    const updated = makeSummary({ title: 'Active Updated' })
     useHandoutStore.getState().handleHandoutUpdated(updated)
     expect(useHandoutStore.getState().activeHandout?.title).toBe('Active Updated')
   })
 
   it('handleHandoutDeleted removes the handout', () => {
-    useHandoutStore.getState().loadHandouts([makeHandout()])
+    useHandoutStore.getState().loadHandouts([makeSummary()])
     useHandoutStore.getState().handleHandoutDeleted('handout-1')
     expect(useHandoutStore.getState().handouts).toHaveLength(0)
   })
 
   it('handleHandoutDeleted clears activeHandout if it matches', () => {
     const handout = makeHandout()
-    useHandoutStore.getState().loadHandouts([handout])
+    useHandoutStore.getState().loadHandouts([makeSummary()])
     useHandoutStore.getState().setActiveHandout(handout)
     useHandoutStore.getState().handleHandoutDeleted('handout-1')
     expect(useHandoutStore.getState().activeHandout).toBeNull()
@@ -81,8 +91,10 @@ describe('useHandoutStore', () => {
 
   it('handleHandoutDeleted does not clear activeHandout if different id', () => {
     const handout = makeHandout({ id: 'handout-1' })
-    const other = makeHandout({ id: 'handout-2', title: 'Other' })
-    useHandoutStore.getState().loadHandouts([handout, other])
+    useHandoutStore.getState().loadHandouts([
+      makeSummary({ id: 'handout-1' }),
+      makeSummary({ id: 'handout-2', title: 'Other' }),
+    ])
     useHandoutStore.getState().setActiveHandout(handout)
     useHandoutStore.getState().handleHandoutDeleted('handout-2')
     expect(useHandoutStore.getState().activeHandout?.id).toBe('handout-1')

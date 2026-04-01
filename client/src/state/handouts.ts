@@ -1,19 +1,20 @@
 import { create } from 'zustand';
 import type { Handout } from '../types/Handout';
+import type { HandoutSummary } from '../types/HandoutSummary';
 
 interface HandoutState {
-  handouts: Handout[];
+  handouts: HandoutSummary[];
   activeHandout: Handout | null;
 
-  loadHandouts: (handouts: Handout[]) => void;
+  loadHandouts: (handouts: HandoutSummary[]) => void;
   setActiveHandout: (handout: Handout | null) => void;
-  handleHandoutCreated: (handout: Handout) => void;
-  handleHandoutUpdated: (handout: Handout) => void;
+  handleHandoutCreated: (handout: HandoutSummary) => void;
+  handleHandoutUpdated: (handout: HandoutSummary) => void;
   handleHandoutDeleted: (handoutId: string) => void;
 }
 
 const initialState = {
-  handouts: [] as Handout[],
+  handouts: [] as HandoutSummary[],
   activeHandout: null as Handout | null,
 };
 
@@ -35,7 +36,9 @@ export const useHandoutStore = create<HandoutState>()((set) => ({
     set((s) => ({
       handouts: s.handouts.map((h) => (h.id === handout.id ? handout : h)),
       activeHandout:
-        s.activeHandout?.id === handout.id ? handout : s.activeHandout,
+        s.activeHandout?.id === handout.id
+          ? { ...s.activeHandout, ...handout }
+          : s.activeHandout,
     })),
 
   handleHandoutDeleted: (handoutId) =>
