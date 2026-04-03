@@ -10,6 +10,7 @@ import type { DrawingRenderer } from './DrawingRenderer'
 import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
+import type { WallRenderer } from './WallRenderer'
 import type { TextureManager } from './TextureManager'
 import type { AccessibilityDOM } from './AccessibilityDOM'
 
@@ -34,6 +35,7 @@ export function CanvasView() {
   const drawingToolsRef = useRef<DrawingTools | null>(null)
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const measurementRef = useRef<MeasurementOverlay | null>(null)
+  const wallRendererRef = useRef<WallRenderer | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
   const accessibilityRef = useRef<AccessibilityDOM | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
@@ -127,6 +129,11 @@ export function CanvasView() {
         if (!mounted) { destroySubsystems(app); return }
         measurementRef.current = new MeasurementOverlay(app, viewportRef.current)
         subsystems.push({ destroy: () => { measurementRef.current?.destroy(); measurementRef.current = null } })
+
+        const { WallRenderer } = await import('./WallRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        wallRendererRef.current = new WallRenderer(viewportRef.current)
+        subsystems.push({ destroy: () => { wallRendererRef.current?.destroy(); wallRendererRef.current = null } })
 
         const { AccessibilityDOM } = await import('./AccessibilityDOM')
         if (!mounted) { destroySubsystems(app); return }
