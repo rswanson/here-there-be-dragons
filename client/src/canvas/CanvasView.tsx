@@ -11,6 +11,7 @@ import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
 import type { WallRenderer } from './WallRenderer'
+import type { WallInteraction } from './WallInteraction'
 import type { FogRenderer } from './FogRenderer'
 import type { LightRenderer } from './LightRenderer'
 import type { TextureManager } from './TextureManager'
@@ -38,6 +39,7 @@ export function CanvasView() {
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const measurementRef = useRef<MeasurementOverlay | null>(null)
   const wallRendererRef = useRef<WallRenderer | null>(null)
+  const wallInteractionRef = useRef<WallInteraction | null>(null)
   const fogRendererRef = useRef<FogRenderer | null>(null)
   const lightRendererRef = useRef<LightRenderer | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
@@ -138,6 +140,11 @@ export function CanvasView() {
         if (!mounted) { destroySubsystems(app); return }
         wallRendererRef.current = new WallRenderer(viewportRef.current)
         subsystems.push({ destroy: () => { wallRendererRef.current?.destroy(); wallRendererRef.current = null } })
+
+        const { WallInteraction } = await import('./WallInteraction')
+        if (!mounted) { destroySubsystems(app); return }
+        wallInteractionRef.current = new WallInteraction(app, viewportRef.current)
+        subsystems.push({ destroy: () => { wallInteractionRef.current?.destroy(); wallInteractionRef.current = null } })
 
         const { FogRenderer } = await import('./FogRenderer')
         if (!mounted) { destroySubsystems(app); return }
