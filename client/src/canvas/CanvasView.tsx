@@ -12,6 +12,7 @@ import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
 import type { WallRenderer } from './WallRenderer'
 import type { FogRenderer } from './FogRenderer'
+import type { LightRenderer } from './LightRenderer'
 import type { TextureManager } from './TextureManager'
 import type { AccessibilityDOM } from './AccessibilityDOM'
 
@@ -38,6 +39,7 @@ export function CanvasView() {
   const measurementRef = useRef<MeasurementOverlay | null>(null)
   const wallRendererRef = useRef<WallRenderer | null>(null)
   const fogRendererRef = useRef<FogRenderer | null>(null)
+  const lightRendererRef = useRef<LightRenderer | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
   const accessibilityRef = useRef<AccessibilityDOM | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
@@ -141,6 +143,11 @@ export function CanvasView() {
         if (!mounted) { destroySubsystems(app); return }
         fogRendererRef.current = new FogRenderer(viewportRef.current)
         subsystems.push({ destroy: () => { fogRendererRef.current?.destroy(); fogRendererRef.current = null } })
+
+        const { LightRenderer } = await import('./LightRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        lightRendererRef.current = new LightRenderer(viewportRef.current)
+        subsystems.push({ destroy: () => { lightRendererRef.current?.destroy(); lightRendererRef.current = null } })
 
         const { AccessibilityDOM } = await import('./AccessibilityDOM')
         if (!mounted) { destroySubsystems(app); return }
