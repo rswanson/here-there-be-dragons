@@ -1,4 +1,5 @@
 import type { ServerMessage } from '../types/ServerMessage';
+import type { Handout } from '../types/Handout';
 import type { Token } from '../types/Token';
 import type { Drawing } from '../types/Drawing';
 import type { Wall } from '../types/Wall';
@@ -132,11 +133,11 @@ export function createMessageDispatcher(): (msg: ServerMessage) => void {
 
       // Handout messages
       case 'HandoutCreated': {
-        useHandoutStore.getState().handleHandoutCreated(msg.payload.handout);
+        useHandoutStore.getState().handleHandoutCreated(msg.payload.handout as unknown as Handout);
         break;
       }
       case 'HandoutUpdated': {
-        useHandoutStore.getState().handleHandoutUpdated(msg.payload.handout);
+        useHandoutStore.getState().handleHandoutUpdated(msg.payload.handout as unknown as Handout);
         break;
       }
       case 'HandoutDeleted': {

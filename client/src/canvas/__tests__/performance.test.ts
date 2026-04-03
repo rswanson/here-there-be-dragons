@@ -24,6 +24,11 @@ function makeToken(i: number): Token {
     rotation: 0,
     bars: [],
     status_markers: [],
+    has_vision: false,
+    vision_range: 0,
+    darkvision_range: 0,
+    light_bright: 0,
+    light_dim: 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

@@ -85,6 +85,11 @@ function TokenInspectorForm({ token }: TokenInspectorFormProps) {
         rotation: token.rotation,
         bars: bars.map(localBarToTokenBar),
         status_markers: statusMarkers,
+        has_vision: token.has_vision,
+        vision_range: token.vision_range,
+        darkvision_range: token.darkvision_range,
+        light_bright: token.light_bright,
+        light_dim: token.light_dim,
       })
       updateToken(token.id, updated)
     } catch (e) {

@@ -42,16 +42,7 @@ export function DocsTab({ campaignId }: DocsTabProps) {
 
   useEffect(() => {
     handoutsApi.list(campaignId).then((fullHandouts) => {
-      // API returns Handout[] — extract summaries for the store
-      loadHandouts(
-        fullHandouts.map(({ id, title, visibility, player_ids, updated_at }) => ({
-          id,
-          title,
-          visibility,
-          player_ids,
-          updated_at,
-        })),
-      )
+      loadHandouts(fullHandouts)
     })
   }, [campaignId, loadHandouts])
 
@@ -67,26 +58,14 @@ export function DocsTab({ campaignId }: DocsTabProps) {
       visibility: 'dm_only',
       player_ids: [],
     })
-    handleHandoutCreated({
-      id: handout.id,
-      title: handout.title,
-      visibility: handout.visibility,
-      player_ids: handout.player_ids,
-      updated_at: handout.updated_at,
-    })
+    handleHandoutCreated(handout)
     setActiveHandout(handout)
   }
 
   const handleSave = async (updates: UpdateHandoutRequest) => {
     if (!activeHandout) return
     const updated = await handoutsApi.update(activeHandout.id, updates)
-    handleHandoutUpdated({
-      id: updated.id,
-      title: updated.title,
-      visibility: updated.visibility,
-      player_ids: updated.player_ids,
-      updated_at: updated.updated_at,
-    })
+    handleHandoutUpdated(updated)
     setActiveHandout(updated)
   }
 

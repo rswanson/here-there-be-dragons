@@ -145,6 +145,8 @@ describe('createMessageDispatcher', () => {
         layers: [{ id: 'l1', sort_order: 0 } as any],
         tokens: [{ id: 't1' } as any],
         drawings: [{ id: 'd1', layer_id: 'l1' } as any],
+        walls: [],
+        fog_cells: [],
       },
     });
 

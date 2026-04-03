@@ -1,8 +1,10 @@
-export enum LightLevel {
-  Bright = 'bright',
-  Dim = 'dim',
-  Dark = 'dark',
-}
+export const LightLevel = {
+  Bright: 'bright',
+  Dim: 'dim',
+  Dark: 'dark',
+} as const
+
+export type LightLevel = (typeof LightLevel)[keyof typeof LightLevel]
 
 export type LightSource = {
   x: number;
@@ -27,7 +29,7 @@ export function computeLightLevel(
   sources: LightSource[],
   darkvisionRange: number,
 ): LightLevel {
-  let best = LightLevel.Dark;
+  let best: LightLevel = LightLevel.Dark;
 
   for (const source of sources) {
     const dx = cx - source.x;

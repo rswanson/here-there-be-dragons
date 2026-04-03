@@ -67,6 +67,11 @@ export function TokenContextMenu({ token, x, y, onClose }: TokenContextMenuProps
         owner_id: token.owner_id,
         bars: token.bars,
         status_markers: token.status_markers,
+        has_vision: false,
+        vision_range: 0,
+        darkvision_range: 0,
+        light_bright: 0,
+        light_dim: 0,
       })
       addToken(resp)
     } catch {
@@ -114,6 +119,11 @@ export function TokenContextMenu({ token, x, y, onClose }: TokenContextMenuProps
         rotation: null,
         bars: null,
         status_markers: null,
+        has_vision: null,
+        vision_range: null,
+        darkvision_range: null,
+        light_bright: null,
+        light_dim: null,
       })
       updateToken(token.id, updated)
     } catch {
