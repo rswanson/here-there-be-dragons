@@ -54,7 +54,7 @@ export class FogRenderer {
   private unexploredGraphics: Graphics
   private exploredGraphics: Graphics
   private maskGraphics: Graphics
-  private enabled_ = true
+  private enabled_ = false
 
   private prevPolygons: Record<string, Point[]> = {}
   private prevRevealedCells: Set<string> = new Set()
@@ -74,6 +74,7 @@ export class FogRenderer {
     this.viewport = viewport
 
     this.container = new Container()
+    this.container.visible = false // Fog disabled by default (DM view)
 
     // Bottom layer: explored cell overlay (lighter fog for explored areas)
     this.exploredGraphics = new Graphics()
@@ -114,6 +115,13 @@ export class FogRenderer {
         this.prevRevealedCells = revealedCells
         this.prevExploredCells = exploredCells
         this.prevVisionMode = visionMode
+
+        // Auto-enable fog in player preview, disable in DM view
+        const shouldEnable = visionMode === 'player'
+        if (shouldEnable !== this.enabled_) {
+          this.setEnabled(shouldEnable)
+        }
+
         this.sync()
       }
     })
