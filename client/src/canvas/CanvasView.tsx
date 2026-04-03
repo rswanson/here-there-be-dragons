@@ -11,6 +11,7 @@ import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
 import type { WallRenderer } from './WallRenderer'
+import type { FogRenderer } from './FogRenderer'
 import type { TextureManager } from './TextureManager'
 import type { AccessibilityDOM } from './AccessibilityDOM'
 
@@ -36,6 +37,7 @@ export function CanvasView() {
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const measurementRef = useRef<MeasurementOverlay | null>(null)
   const wallRendererRef = useRef<WallRenderer | null>(null)
+  const fogRendererRef = useRef<FogRenderer | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
   const accessibilityRef = useRef<AccessibilityDOM | null>(null)
   const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
@@ -134,6 +136,11 @@ export function CanvasView() {
         if (!mounted) { destroySubsystems(app); return }
         wallRendererRef.current = new WallRenderer(viewportRef.current)
         subsystems.push({ destroy: () => { wallRendererRef.current?.destroy(); wallRendererRef.current = null } })
+
+        const { FogRenderer } = await import('./FogRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        fogRendererRef.current = new FogRenderer(viewportRef.current)
+        subsystems.push({ destroy: () => { fogRendererRef.current?.destroy(); fogRendererRef.current = null } })
 
         const { AccessibilityDOM } = await import('./AccessibilityDOM')
         if (!mounted) { destroySubsystems(app); return }
