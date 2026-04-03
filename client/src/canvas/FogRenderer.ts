@@ -2,7 +2,10 @@ import { Container, Graphics } from 'pixi.js'
 import { useVisionStore } from '../state/vision'
 import { useFogStore } from '../state/fog'
 import { useMapStore } from '../state/map'
-import type { Point } from './math/raycasting'
+import { useTokenStore } from '../state/tokens'
+import { useWallStore } from '../state/walls'
+import { computeVisibilityPolygon } from './math/raycasting'
+import type { Point, Segment } from './math/raycasting'
 import type { Viewport } from './Viewport'
 import { getCellSize } from './utils'
 
@@ -60,9 +63,12 @@ export class FogRenderer {
   private prevGridSize = 0
   private prevMapId: string | null = null
 
+  private dimGraphics: Graphics
+
   private unsubVision: (() => void) | null = null
   private unsubFog: (() => void) | null = null
   private unsubMap: (() => void) | null = null
+  private unsubDirty: (() => void) | null = null
 
   constructor(viewport: Viewport) {
     this.viewport = viewport
@@ -72,6 +78,10 @@ export class FogRenderer {
     // Bottom layer: explored cell overlay (lighter fog for explored areas)
     this.exploredGraphics = new Graphics()
     this.container.addChild(this.exploredGraphics)
+
+    // Dim light overlay (rendered on top of explored, below full fog)
+    this.dimGraphics = new Graphics()
+    this.container.addChild(this.dimGraphics)
 
     // Top layer: full unexplored fog with visibility-polygon mask
     this.unexploredGraphics = new Graphics()
@@ -118,7 +128,57 @@ export class FogRenderer {
       }
     })
 
+    this.unsubDirty = useVisionStore.subscribe(() => {
+      if (useVisionStore.getState().dirty) {
+        this.recompute()
+      }
+    })
+
+    this.recompute()
     this.sync()
+  }
+
+  /**
+   * Recompute visibility polygons from token positions and walls.
+   * Called when visionStore.dirty is set.
+   */
+  recompute(): void {
+    useVisionStore.getState().clearDirty()
+
+    const tokens = useTokenStore.getState().tokens.filter((t) => t.has_vision)
+    const walls = useWallStore.getState().walls
+    const fogStore = useFogStore.getState()
+
+    // Build wall segments — filter by blocking type
+    const segments: Segment[] = []
+    for (const wall of walls) {
+      const blocks =
+        wall.wall_type === 'wall' ||
+        wall.wall_type === 'secret_door' ||
+        (wall.wall_type === 'door' && wall.door_state !== 'open')
+      if (blocks) {
+        segments.push({ x1: wall.x1, y1: wall.y1, x2: wall.x2, y2: wall.y2 })
+      }
+    }
+
+    // For each vision token, compute visibility polygon
+    for (const token of tokens) {
+      const cx = token.x + token.size / 2
+      const cy = token.y + token.size / 2
+      const range = token.vision_range
+
+      const polygon = computeVisibilityPolygon(cx, cy, range, segments)
+      useVisionStore.getState().setPolygon(token.id, polygon)
+
+      // Mark explored cells within visibility polygon that are DM-revealed
+      for (const pt of polygon) {
+        const cellX = Math.floor(pt.x)
+        const cellY = Math.floor(pt.y)
+        if (fogStore.isRevealed(cellX, cellY)) {
+          fogStore.markExplored(cellX, cellY)
+        }
+      }
+    }
   }
 
   /** Enable or disable the fog overlay (DM sees map fully, players see fog). */
@@ -135,6 +195,7 @@ export class FogRenderer {
       this.unexploredGraphics.clear()
       this.exploredGraphics.clear()
       this.maskGraphics.clear()
+      this.dimGraphics.clear()
       return
     }
 
@@ -188,12 +249,48 @@ export class FogRenderer {
       this.maskGraphics.poly(flat, true)
       this.maskGraphics.fill({ color: 0x000000, alpha: 1 })
     }
+
+    // --- Dim light overlay ---
+    // Within visibility polygons, cells in the dim zone get a darkening overlay.
+    // Dim zone = cells beyond bright light range but within dim light range.
+    this.dimGraphics.clear()
+    const tokens = useTokenStore.getState().tokens.filter((t) => t.has_vision)
+    for (const token of tokens) {
+      const tokenPolygon = polygons[token.id]
+      if (!tokenPolygon || tokenPolygon.length < 3) continue
+
+      const brightRange = token.light_bright
+      const dimRange = token.light_dim
+      if (dimRange <= brightRange) continue // no dim zone
+
+      const cx = (token.x + token.size / 2) * gridSize
+      const cy = (token.y + token.size / 2) * gridSize
+      const brightRangePx = brightRange * gridSize
+      const brightRangeSq = brightRangePx * brightRangePx
+
+      // Draw a slight darkening overlay within the polygon for the dim zone
+      for (const pt of tokenPolygon) {
+        const px = pt.x * gridSize
+        const py = pt.y * gridSize
+        const dx = px - cx
+        const dy = py - cy
+        const distSq = dx * dx + dy * dy
+        if (distSq > brightRangeSq) {
+          // This vertex is in the dim zone -- draw a small darkening rect
+          const cellX = Math.floor(pt.x)
+          const cellY = Math.floor(pt.y)
+          this.dimGraphics.rect(cellX * gridSize, cellY * gridSize, gridSize, gridSize)
+          this.dimGraphics.fill({ color: FOG_COLOR, alpha: 0.25 })
+        }
+      }
+    }
   }
 
   destroy(): void {
     this.unsubVision?.()
     this.unsubFog?.()
     this.unsubMap?.()
+    this.unsubDirty?.()
     // Remove mask reference before destroying
     this.unexploredGraphics.mask = null
     this.container.parent?.removeChild(this.container)
