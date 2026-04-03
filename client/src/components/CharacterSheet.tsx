@@ -115,15 +115,8 @@ export function CharacterSheet() {
   return (
     <div
       style={{
-        position: 'absolute',
-        right: 0,
-        top: 0,
-        width: 360,
-        maxHeight: '100vh',
         overflowY: 'auto',
-        zIndex: 20,
         background: 'var(--color-surface, #2a2a3e)',
-        borderLeft: '1px solid var(--color-border, #444)',
         padding: 12,
         display: 'flex',
         flexDirection: 'column',
