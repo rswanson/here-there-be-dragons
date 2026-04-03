@@ -4,4 +4,4 @@ import type { TokenBar } from "./TokenBar";
 /**
  * Request type for updating a token (all fields optional for PATCH)
  */
-export type UpdateTokenRequest = { name: string | null, asset_id: string | null | null, owner_id: string | null | null, x: number | null, y: number | null, size: number | null, rotation: number | null, bars: Array<TokenBar> | null, status_markers: Array<string> | null, };
+export type UpdateTokenRequest = { name: string | null, asset_id: string | null | null, owner_id: string | null | null, x: number | null, y: number | null, size: number | null, rotation: number | null, bars: Array<TokenBar> | null, status_markers: Array<string> | null, has_vision: boolean | null, vision_range: number | null, darkvision_range: number | null, light_bright: number | null, light_dim: number | null, };
