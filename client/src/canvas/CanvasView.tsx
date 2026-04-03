@@ -236,7 +236,8 @@ export function CanvasView() {
         const sprite = new PIXI.Sprite(texture)
         // Fit the map to the screen and use fitToRect for a proper viewport fit
         viewportRef.current.fitToRect(sprite.width, sprite.height)
-        viewportRef.current.container.addChild(sprite)
+        // Add map sprite at index 0 so it renders BEHIND grid, layers, walls, fog
+        viewportRef.current.container.addChildAt(sprite, 0)
         spriteRef.current = sprite
       } catch (err) {
         console.error('Failed to load map asset:', err)
