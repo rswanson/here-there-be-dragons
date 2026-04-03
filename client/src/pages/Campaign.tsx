@@ -13,6 +13,7 @@ import { TokenInspector } from '../components/TokenInspector'
 import { MapSettings } from '../components/MapSettings'
 import { TokenContextMenu } from '../components/TokenContextMenu'
 import { SidebarTabs } from '../components/SidebarTabs'
+import { CharacterSheet } from '../components/CharacterSheet'
 import { InitiativePanel } from '../components/InitiativePanel'
 import { useMapStore } from '../state/map'
 import { useTokenStore } from '../state/tokens'
@@ -140,6 +141,7 @@ export function Campaign() {
   }, [selectedMapId, loadMap, loadTokens, loadDrawings])
 
   const characters = useCharacterStore((s) => s.characters)
+  const activeCharacterId = useCharacterStore((s) => s.activeCharacterId)
 
   const handleAddStartEntry = () => {
     const name = startCombatName.trim()
@@ -177,6 +179,7 @@ export function Campaign() {
         <LayerPanel />
         <TokenInspector />
         <InitiativePanel />
+        {activeCharacterId && <CharacterSheet />}
 
         {/* Start Combat button / form — DM only, shown when no active encounter */}
         {isDm && !encounter && (
