@@ -36,15 +36,25 @@ pub async fn get_map_state(
         (layers, tokens, drawings)
     };
 
+    let wall_rows = db::walls::list_for_map(&state.pool, &id).await?;
+    let fog_cell_tuples = db::fog_cells::list_for_map(&state.pool, &id).await?;
+
     let map = map_row.into();
     let layers = layer_rows.into_iter().map(Into::into).collect();
     let tokens = token_rows.into_iter().map(Into::into).collect();
     let drawings = drawing_rows.into_iter().map(Into::into).collect();
+    let walls = wall_rows.into_iter().map(Into::into).collect();
+    let fog_cells = fog_cell_tuples
+        .into_iter()
+        .map(|(x, y)| htbd_core::fog::FogCell { x, y })
+        .collect();
 
     Ok(Json(MapFullState {
         map,
         layers,
         tokens,
         drawings,
+        walls,
+        fog_cells,
     }))
 }

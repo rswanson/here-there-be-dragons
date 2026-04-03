@@ -4,6 +4,7 @@ pub mod campaigns;
 pub mod characters;
 pub mod chat;
 pub mod drawings;
+pub mod fog;
 pub mod game_systems;
 pub mod guards;
 pub mod handouts;
@@ -12,6 +13,7 @@ pub mod map_images;
 pub mod maps;
 pub mod state;
 pub mod tokens;
+pub mod walls;
 pub mod ws;
 
 use crate::state::AppState;
@@ -32,5 +34,7 @@ pub fn api_routes() -> Router<AppState> {
         .merge(chat::routes())
         .merge(handouts::routes())
         .merge(game_systems::routes())
+        .merge(walls::routes())
+        .merge(fog::routes())
         .route("/maps/{id}/state", axum::routing::get(state::get_map_state))
 }
