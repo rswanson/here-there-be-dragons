@@ -1,6 +1,7 @@
 import type { ServerMessage } from '../types/ServerMessage';
 import type { Token } from '../types/Token';
 import type { Drawing } from '../types/Drawing';
+import type { Wall } from '../types/Wall';
 import { useTokenStore } from '../state/tokens';
 import { useDrawingStore } from '../state/drawings';
 import { usePresenceStore } from '../state/presence';
@@ -9,6 +10,9 @@ import { useCharacterStore } from '../state/characters';
 import { useChatStore } from '../state/chat';
 import { useHandoutStore } from '../state/handouts';
 import { useInitiativeStore } from '../state/initiative';
+import { useWallStore } from '../state/walls';
+import { useFogStore } from '../state/fog';
+import { useVisionStore } from '../state/vision';
 
 /**
  * Creates a message dispatcher that routes incoming server WebSocket messages
@@ -66,10 +70,13 @@ export function createMessageDispatcher(): (msg: ServerMessage) => void {
 
       // Full state sync
       case 'FullState': {
-        const { map, layers, tokens, drawings } = msg.payload;
+        const { map, layers, tokens, drawings, walls, fog_cells } = msg.payload;
         useMapStore.getState().loadMap(map, layers);
         useTokenStore.getState().loadTokens(tokens);
         useDrawingStore.getState().loadDrawings(drawings);
+        if (walls) useWallStore.getState().loadWalls(walls);
+        if (fog_cells) useFogStore.getState().loadRevealedCells(fog_cells);
+        useVisionStore.getState().setDirty();
         break;
       }
 
@@ -166,6 +173,39 @@ export function createMessageDispatcher(): (msg: ServerMessage) => void {
       }
       case 'EncounterEnded': {
         useInitiativeStore.getState().handleEncounterEnded();
+        break;
+      }
+
+      // Wall messages
+      case 'WallsCreated': {
+        useWallStore.getState().addWalls(msg.payload.walls);
+        useVisionStore.getState().setDirty();
+        break;
+      }
+      case 'WallUpdated': {
+        useWallStore.getState().updateWall(msg.payload.wall_id, msg.payload.patch as unknown as Partial<Wall>);
+        useVisionStore.getState().setDirty();
+        break;
+      }
+      case 'WallsDeleted': {
+        useWallStore.getState().removeWalls(msg.payload.wall_ids);
+        useVisionStore.getState().setDirty();
+        break;
+      }
+      case 'DoorToggled': {
+        useWallStore.getState().updateDoorState(msg.payload.wall_id, msg.payload.door_state);
+        useVisionStore.getState().setDirty();
+        break;
+      }
+      case 'DoorLocked': {
+        break;
+      }
+      case 'FogRevealed': {
+        if (msg.payload.revealed) {
+          useFogStore.getState().revealCells(msg.payload.cells);
+        } else {
+          useFogStore.getState().hideCells(msg.payload.cells);
+        }
         break;
       }
 
