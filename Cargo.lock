@@ -998,6 +998,7 @@ name = "htbd-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "rand 0.10.0",
  "serde",
  "serde_json",
  "ts-rs",

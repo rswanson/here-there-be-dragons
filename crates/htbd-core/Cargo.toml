@@ -9,3 +9,4 @@ serde_json.workspace = true
 uuid.workspace = true
 chrono.workspace = true
 ts-rs.workspace = true
+rand = "0.10"

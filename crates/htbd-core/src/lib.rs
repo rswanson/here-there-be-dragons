@@ -1,7 +1,10 @@
 pub mod auth;
 pub mod character;
+pub mod chat;
 pub mod drawing;
 pub mod game_system;
+pub mod handout;
+pub mod initiative;
 pub mod map;
 pub mod messages;
 pub mod models;
@@ -86,5 +89,23 @@ mod tests {
         character::CharacterExport::export_all(&cfg).unwrap();
         character::AddBonusRequest::export_all(&cfg).unwrap();
         character::UpdateBonusRequest::export_all(&cfg).unwrap();
+
+        // Chat
+        chat::ChatMessage::export_all(&cfg).unwrap();
+        chat::ChatMessageType::export_all(&cfg).unwrap();
+        chat::SendChatMessageRequest::export_all(&cfg).unwrap();
+
+        // Handout
+        handout::Handout::export_all(&cfg).unwrap();
+        handout::HandoutSummary::export_all(&cfg).unwrap();
+        handout::HandoutVisibility::export_all(&cfg).unwrap();
+        handout::CreateHandoutRequest::export_all(&cfg).unwrap();
+        handout::UpdateHandoutRequest::export_all(&cfg).unwrap();
+
+        // Initiative
+        initiative::Encounter::export_all(&cfg).unwrap();
+        initiative::Combatant::export_all(&cfg).unwrap();
+        initiative::StartEncounterRequest::export_all(&cfg).unwrap();
+        initiative::NewCombatant::export_all(&cfg).unwrap();
     }
 }

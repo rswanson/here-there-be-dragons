@@ -6,8 +6,17 @@ import { registerAndLogin, createCampaign, navigateToCampaign } from './helpers'
 // ---------------------------------------------------------------------------
 
 /**
+ * Switch to the Chars tab in the sidebar.
+ */
+async function switchToCharsTab(page: Page): Promise<void> {
+  await page.getByRole('tab', { name: 'Chars' }).click()
+  await page.waitForTimeout(300)
+}
+
+/**
  * Open the character create dialog and create a character with the given name.
- * After creation, the character is automatically set as active (sheet opens).
+ * After creation, the character is automatically set as active (sheet overlay opens).
+ * Assumes the Chars tab is active.
  */
 async function createCharacter(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: '+ New', exact: true }).click()
@@ -18,6 +27,14 @@ async function createCharacter(page: Page, name: string): Promise<void> {
   await page.locator('#char-name').fill(name)
   await page.getByRole('button', { name: 'Create' }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 })
+}
+
+/**
+ * Close the character sheet overlay via the × button.
+ */
+async function closeCharacterSheet(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Close character sheet' }).click()
+  await page.waitForTimeout(300)
 }
 
 // ---------------------------------------------------------------------------
@@ -32,11 +49,14 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-create-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Create Test')
     await navigateToCampaign(page, 'Character Create Test')
+    await switchToCharsTab(page)
 
     await expect(page.getByText('No characters yet.')).toBeVisible({ timeout: 5_000 })
 
     await createCharacter(page, 'Aragorn')
 
+    // The character list in the sidebar should show the new character
+    // (sheet opens as an overlay, but the list remains visible)
     await expect(page.getByRole('button', { name: 'Aragorn', exact: false })).toBeVisible({
       timeout: 5_000,
     })
@@ -47,9 +67,13 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-list-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character List Test')
     await navigateToCampaign(page, 'Character List Test')
+    await switchToCharsTab(page)
 
     await createCharacter(page, 'Legolas')
+    // Close the sheet overlay so we can create another
+    await closeCharacterSheet(page)
     await createCharacter(page, 'Gimli')
+    await closeCharacterSheet(page)
 
     await expect(page.getByRole('button', { name: 'Legolas', exact: false })).toBeVisible({
       timeout: 5_000,
@@ -64,8 +88,9 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-sheet-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Sheet Open Test')
     await navigateToCampaign(page, 'Character Sheet Open Test')
+    await switchToCharsTab(page)
 
-    // Creating a character automatically opens its sheet
+    // Creating a character automatically opens its sheet as an overlay
     await createCharacter(page, 'Gandalf')
 
     // The sheet should be visible with the character name in the header input
@@ -79,6 +104,7 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-field-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Field Edit Test')
     await navigateToCampaign(page, 'Character Field Edit Test')
+    await switchToCharsTab(page)
 
     // Creating opens the sheet automatically
     await createCharacter(page, 'Frodo')
@@ -109,6 +135,7 @@ test.describe('Character System', () => {
     await registerAndLogin(page, `e2e-char-persist-${ts}@test.com`, password, 'Char Tester')
     await createCampaign(page, 'Character Persist Test')
     await navigateToCampaign(page, 'Character Persist Test')
+    await switchToCharsTab(page)
 
     // Creating opens the sheet automatically
     await createCharacter(page, 'Boromir')
@@ -130,11 +157,12 @@ test.describe('Character System', () => {
     await page.reload()
     await expect(page).toHaveURL(/\/campaigns\//, { timeout: 10_000 })
 
-    // Click the character to re-open the sheet (after reload, no character is active)
+    // Switch to Chars tab and click the character to re-open the sheet
+    await switchToCharsTab(page)
     await expect(
       page.getByRole('button', { name: 'Boromir', exact: false }),
     ).toBeVisible({ timeout: 5_000 })
-    // Character list button is a toggle — click to open sheet
+    // Character list button is a toggle — click to open sheet overlay
     await page.getByRole('button', { name: 'Boromir', exact: false }).click()
 
     // Verify the numeric field still has the edited value

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE initiative_encounters SET current_turn_index = $2, round_number = $3 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "256c3f42bfd8f862b5a571399fe5815916416e2c1bcda7cf8dafb6c2575543ed"
+}
