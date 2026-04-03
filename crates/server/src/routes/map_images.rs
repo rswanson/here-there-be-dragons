@@ -2,7 +2,7 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
-    routing::post,
+    routing::get,
 };
 use uuid::Uuid;
 
@@ -12,15 +12,33 @@ use crate::state::AppState;
 use htbd_core::map::*;
 use htbd_core::messages::ServerMessage;
 
-use super::guards::{get_campaign_id_for_layer, require_dm_for_layer};
+use super::guards::{get_campaign_id_for_layer, require_dm_for_layer, require_member};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/layers/{layer_id}/images", post(place_image))
+        .route(
+            "/layers/{layer_id}/images",
+            get(list_images).post(place_image),
+        )
         .route(
             "/images/{id}",
             axum::routing::patch(update_image).delete(delete_image),
         )
+}
+
+async fn list_images(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(layer_id): Path<Uuid>,
+) -> Result<Json<Vec<MapImage>>, AppError> {
+    let campaign_id = get_campaign_id_for_layer(&state, &layer_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    require_member(&state, campaign_id, auth.user_id).await?;
+
+    let rows = db::map_images::list_for_layer(&state.pool, &layer_id).await?;
+    let images: Vec<MapImage> = rows.into_iter().map(Into::into).collect();
+    Ok(Json(images))
 }
 
 async fn place_image(

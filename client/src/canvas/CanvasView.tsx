@@ -15,6 +15,7 @@ import type { WallInteraction } from './WallInteraction'
 import type { FogRenderer } from './FogRenderer'
 import type { LightRenderer } from './LightRenderer'
 import type { TextureManager } from './TextureManager'
+import type { MapImageRenderer } from './MapImageRenderer'
 import type { AccessibilityDOM } from './AccessibilityDOM'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
@@ -32,6 +33,7 @@ export function CanvasView() {
   const viewportRef = useRef<Viewport | null>(null)
   const gridRef = useRef<GridRenderer | null>(null)
   const layerManagerRef = useRef<LayerManager | null>(null)
+  const mapImageRendererRef = useRef<MapImageRenderer | null>(null)
   const tokenRendererRef = useRef<TokenRenderer | null>(null)
   const tokenInteractionRef = useRef<TokenInteraction | null>(null)
   const drawingRendererRef = useRef<DrawingRenderer | null>(null)
@@ -105,6 +107,11 @@ export function CanvasView() {
         if (!mounted) { destroySubsystems(app); return }
         layerManagerRef.current = new LayerManager(viewportRef.current)
         subsystems.push({ destroy: () => { layerManagerRef.current?.destroy(); layerManagerRef.current = null } })
+
+        const { MapImageRenderer } = await import('./MapImageRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        mapImageRendererRef.current = new MapImageRenderer(layerManagerRef.current, textureManagerRef.current!)
+        subsystems.push({ destroy: () => { mapImageRendererRef.current?.destroy(); mapImageRendererRef.current = null } })
 
         const { TokenRenderer } = await import('./TokenRenderer')
         if (!mounted) { destroySubsystems(app); return }
