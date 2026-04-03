@@ -1,10 +1,12 @@
 use crate::chat::ChatMessage;
 use crate::drawing::{CreateDrawingRequest, Drawing, UpdateDrawingRequest};
+use crate::fog::FogCell;
 use crate::game_system::BonusEntry;
 use crate::handout::HandoutSummary;
 use crate::initiative::{Combatant, Encounter, NewCombatant};
 use crate::map::{Map, MapImage, MapLayer, PlaceMapImageRequest, UpdateMapImageRequest};
 use crate::token::{CreateTokenRequest, Token, UpdateTokenRequest};
+use crate::wall::{CreateWallRequest, DoorState, UpdateWallRequest, Wall};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use ts_rs::TS;
@@ -132,6 +134,29 @@ pub enum ClientMessage {
     EndEncounter {
         encounter_id: Uuid,
     },
+
+    // Walls (DM only)
+    CreateWalls {
+        map_id: Uuid,
+        walls: Vec<CreateWallRequest>,
+    },
+    UpdateWall {
+        wall_id: Uuid,
+        patch: UpdateWallRequest,
+    },
+    DeleteWalls {
+        wall_ids: Vec<Uuid>,
+    },
+    ToggleDoor {
+        wall_id: Uuid,
+    },
+
+    // Fog (DM only)
+    RevealFog {
+        map_id: Uuid,
+        cells: Vec<FogCell>,
+        revealed: bool,
+    },
 }
 
 /// A connected user in a session
@@ -226,6 +251,8 @@ pub enum ServerMessage {
         layers: Vec<MapLayer>,
         tokens: Vec<Token>,
         drawings: Vec<Drawing>,
+        walls: Vec<Wall>,
+        fog_cells: Vec<FogCell>,
     },
     CharacterFieldsUpdated {
         character_id: Uuid,
@@ -295,5 +322,36 @@ pub enum ServerMessage {
     },
     EncounterEnded {
         encounter_id: Uuid,
+    },
+
+    // Walls
+    WallsCreated {
+        map_id: Uuid,
+        walls: Vec<Wall>,
+        created_by: Uuid,
+    },
+    WallUpdated {
+        wall_id: Uuid,
+        patch: UpdateWallRequest,
+        updated_by: Uuid,
+    },
+    WallsDeleted {
+        wall_ids: Vec<Uuid>,
+        deleted_by: Uuid,
+    },
+    DoorToggled {
+        wall_id: Uuid,
+        door_state: DoorState,
+        toggled_by: Uuid,
+    },
+    DoorLocked {
+        wall_id: Uuid,
+    },
+
+    // Fog
+    FogRevealed {
+        map_id: Uuid,
+        cells: Vec<FogCell>,
+        revealed: bool,
     },
 }

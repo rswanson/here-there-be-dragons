@@ -89,6 +89,8 @@ pub struct MapFullState {
     pub layers: Vec<MapLayer>,
     pub tokens: Vec<crate::token::Token>,
     pub drawings: Vec<crate::drawing::Drawing>,
+    pub walls: Vec<crate::wall::Wall>,
+    pub fog_cells: Vec<crate::fog::FogCell>,
 }
 
 /// Request type for creating a new map
