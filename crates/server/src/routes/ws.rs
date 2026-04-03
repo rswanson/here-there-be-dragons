@@ -307,6 +307,25 @@ async fn handle_client_message(
         ClientMessage::EndEncounter { encounter_id } => {
             handle_end_encounter(state, campaign_id, user_id, role, encounter_id).await;
         }
+        ClientMessage::CreateWalls { map_id, walls } => {
+            handle_create_walls(state, campaign_id, user_id, role, map_id, walls).await;
+        }
+        ClientMessage::UpdateWall { wall_id, patch } => {
+            handle_update_wall_ws(state, campaign_id, user_id, role, wall_id, patch).await;
+        }
+        ClientMessage::DeleteWalls { wall_ids } => {
+            handle_delete_walls(state, campaign_id, user_id, role, wall_ids).await;
+        }
+        ClientMessage::ToggleDoor { wall_id } => {
+            handle_toggle_door(state, campaign_id, user_id, role, wall_id).await;
+        }
+        ClientMessage::RevealFog {
+            map_id,
+            cells,
+            revealed,
+        } => {
+            handle_reveal_fog(state, campaign_id, user_id, role, map_id, cells, revealed).await;
+        }
         // CRUD messages (CreateToken, DeleteDrawing, etc.) are handled via REST.
         // JoinSession, LeaveSession, RequestFullState are WS-native but not yet
         // implemented — session join/leave is managed at connection level for now.
@@ -1946,6 +1965,236 @@ async fn handle_end_encounter(
         .session_manager
         .broadcast(campaign_id, &msg, None)
         .await;
+}
+
+async fn handle_toggle_door(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    wall_id: Uuid,
+) {
+    let wall_row = match db::walls::find_by_id(&state.pool, &wall_id).await {
+        Ok(Some(w)) => w,
+        _ => return,
+    };
+
+    // Not a door or secret_door: ignore
+    if wall_row.wall_type == "wall" {
+        return;
+    }
+
+    // Secret doors: only DM can interact
+    if wall_row.wall_type == "secret_door" && role != CampaignRole::Dm {
+        return;
+    }
+
+    // Check player_door_control map setting
+    if role != CampaignRole::Dm
+        && let Ok(Some(map_row)) = db::maps::find_by_id(&state.pool, &wall_row.map_id).await
+        && !map_row.player_door_control
+    {
+        return;
+    }
+
+    // Locked door: players can't open — send DoorLocked to requester only
+    if wall_row.door_state == "locked" && role != CampaignRole::Dm {
+        let msg = ServerMessage::DoorLocked { wall_id };
+        state
+            .session_manager
+            .send_to(campaign_id, user_id, &msg)
+            .await;
+        return;
+    }
+
+    // DM: cycle open → locked → closed → open
+    // Player: toggle between open and closed
+    let new_state = if role == CampaignRole::Dm {
+        match wall_row.door_state.as_str() {
+            "closed" => "open",
+            "open" => "locked",
+            "locked" => "closed",
+            _ => "closed",
+        }
+    } else {
+        match wall_row.door_state.as_str() {
+            "closed" => "open",
+            "open" => "closed",
+            _ => return,
+        }
+    };
+
+    if let Ok(Some(_)) = db::walls::update_door_state(&state.pool, &wall_id, new_state).await {
+        let door_state: htbd_core::wall::DoorState =
+            serde_json::from_value(serde_json::Value::String(new_state.to_string()))
+                .unwrap_or(htbd_core::wall::DoorState::Closed);
+        let msg = ServerMessage::DoorToggled {
+            wall_id,
+            door_state,
+            toggled_by: user_id,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+}
+
+async fn handle_create_walls(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    map_id: Uuid,
+    reqs: Vec<htbd_core::wall::CreateWallRequest>,
+) {
+    if role != CampaignRole::Dm {
+        return;
+    }
+    let mut walls = Vec::with_capacity(reqs.len());
+    for req in &reqs {
+        let wt = serde_json::to_value(req.wall_type)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+        let ds = serde_json::to_value(req.door_state)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string();
+        if let Ok(row) = db::walls::create_wall(
+            &state.pool,
+            &map_id,
+            req.x1,
+            req.y1,
+            req.x2,
+            req.y2,
+            &wt,
+            &ds,
+        )
+        .await
+        {
+            walls.push(htbd_core::wall::Wall::from(row));
+        }
+    }
+    if !walls.is_empty() {
+        let msg = ServerMessage::WallsCreated {
+            map_id,
+            walls,
+            created_by: user_id,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+}
+
+async fn handle_update_wall_ws(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    wall_id: Uuid,
+    patch: htbd_core::wall::UpdateWallRequest,
+) {
+    if role != CampaignRole::Dm {
+        return;
+    }
+    let wt = patch.wall_type.map(|t| {
+        serde_json::to_value(t)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string()
+    });
+    let ds = patch.door_state.map(|s| {
+        serde_json::to_value(s)
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string()
+    });
+    if db::walls::update_wall(
+        &state.pool,
+        &wall_id,
+        patch.x1,
+        patch.y1,
+        patch.x2,
+        patch.y2,
+        wt.as_deref(),
+        ds.as_deref(),
+    )
+    .await
+    .is_ok()
+    {
+        let msg = ServerMessage::WallUpdated {
+            wall_id,
+            patch,
+            updated_by: user_id,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+}
+
+async fn handle_delete_walls(
+    state: &AppState,
+    campaign_id: Uuid,
+    user_id: Uuid,
+    role: CampaignRole,
+    wall_ids: Vec<Uuid>,
+) {
+    if role != CampaignRole::Dm {
+        return;
+    }
+    if db::walls::delete_walls(&state.pool, &wall_ids)
+        .await
+        .is_ok()
+    {
+        let msg = ServerMessage::WallsDeleted {
+            wall_ids,
+            deleted_by: user_id,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
+}
+
+async fn handle_reveal_fog(
+    state: &AppState,
+    campaign_id: Uuid,
+    _user_id: Uuid,
+    role: CampaignRole,
+    map_id: Uuid,
+    cells: Vec<htbd_core::fog::FogCell>,
+    revealed: bool,
+) {
+    if role != CampaignRole::Dm {
+        return;
+    }
+    let tuples: Vec<(i32, i32)> = cells.iter().map(|c| (c.x, c.y)).collect();
+    let result = if revealed {
+        db::fog_cells::reveal_cells(&state.pool, &map_id, &tuples).await
+    } else {
+        db::fog_cells::hide_cells(&state.pool, &map_id, &tuples).await
+    };
+    if result.is_ok() {
+        let msg = ServerMessage::FogRevealed {
+            map_id,
+            cells,
+            revealed,
+        };
+        state
+            .session_manager
+            .broadcast(campaign_id, &msg, None)
+            .await;
+    }
 }
 
 async fn handle_link_token_to_character(
