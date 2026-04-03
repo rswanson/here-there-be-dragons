@@ -10,6 +10,10 @@ import { CanvasView } from '../canvas/CanvasView'
 import { Toolbar } from '../components/Toolbar'
 import { LayerPanel } from '../components/LayerPanel'
 import { TokenInspector } from '../components/TokenInspector'
+import { WallToolbar } from '../components/WallToolbar'
+import { TokenVisionEditor } from '../components/TokenVisionEditor'
+import { VisionPanel } from '../components/VisionPanel'
+import { FogTool } from '../components/FogTool'
 import { MapSettings } from '../components/MapSettings'
 import { TokenContextMenu } from '../components/TokenContextMenu'
 import { SidebarTabs } from '../components/SidebarTabs'
@@ -176,6 +180,18 @@ export function Campaign() {
         <Toolbar />
         <LayerPanel />
         <TokenInspector />
+        {isDm && <TokenVisionEditor />}
+        {isDm && <WallToolbar />}
+        {isDm && (
+          <div style={{
+            position: 'absolute', left: 8, bottom: 8,
+            background: 'var(--color-surface, #2a2a3e)', borderRadius: 8,
+            padding: 6, zIndex: 10,
+          }}>
+            <FogTool />
+          </div>
+        )}
+        {isDm && <VisionPanel />}
         <InitiativePanel />
 
         {/* Start Combat button / form — DM only, shown when no active encounter */}
