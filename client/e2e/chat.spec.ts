@@ -62,6 +62,9 @@ test.describe('Chat', () => {
     await page.getByRole('button', { name: 'Create' }).click()
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5_000 })
 
+    // Close the character sheet overlay that opens after creation
+    await page.getByRole('button', { name: 'Close character sheet' }).click()
+
     // Switch to Chat tab
     await page.getByRole('tab', { name: 'Chat' }).click()
     await expect(page.getByPlaceholder('Say something… /me /w /session')).toBeVisible({

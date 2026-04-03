@@ -2,10 +2,8 @@ import * as Tabs from '@radix-ui/react-tabs'
 import { CampaignTab } from './CampaignTab'
 import { CharacterList } from './CharacterList'
 import { CharacterCreateDialog } from './CharacterCreateDialog'
-import { CharacterSheet } from './CharacterSheet'
 import { ChatTab } from './ChatTab'
 import { DocsTab } from './DocsTab'
-import { useCharacterStore } from '../state/characters'
 import { useState } from 'react'
 
 interface MapSummary {
@@ -60,8 +58,6 @@ export function SidebarTabs({
   assetBrowserOpen,
   onAssetBrowserOpenChange,
 }: SidebarTabsProps) {
-  const activeCharacterId = useCharacterStore((s) => s.activeCharacterId)
-  const setActiveCharacter = useCharacterStore((s) => s.setActiveCharacter)
   const [createCharOpen, setCreateCharOpen] = useState(false)
 
   return (
@@ -132,34 +128,12 @@ export function SidebarTabs({
 
       <Tabs.Content value="chars" style={contentStyle}>
         <div style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          {activeCharacterId ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                onClick={() => setActiveCharacter(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: 'var(--font-size-sm)',
-                  padding: 0,
-                  textAlign: 'left',
-                }}
-              >
-                &larr; Back to list
-              </button>
-              <CharacterSheet />
-            </div>
-          ) : (
-            <>
-              <CharacterList campaignId={campaignId} onCreateClick={() => setCreateCharOpen(true)} />
-              <CharacterCreateDialog
-                campaignId={campaignId}
-                open={createCharOpen}
-                onOpenChange={setCreateCharOpen}
-              />
-            </>
-          )}
+          <CharacterList campaignId={campaignId} onCreateClick={() => setCreateCharOpen(true)} />
+          <CharacterCreateDialog
+            campaignId={campaignId}
+            open={createCharOpen}
+            onOpenChange={setCreateCharOpen}
+          />
         </div>
       </Tabs.Content>
 
