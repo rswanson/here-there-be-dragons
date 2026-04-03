@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE tokens SET\n            name = COALESCE($2, name),\n            asset_id = CASE WHEN $3 THEN $4 ELSE asset_id END,\n            owner_id = CASE WHEN $5 THEN $6 ELSE owner_id END,\n            x = COALESCE($7, x),\n            y = COALESCE($8, y),\n            size = COALESCE($9, size),\n            rotation = COALESCE($10, rotation),\n            bars_json = COALESCE($11, bars_json),\n            status_markers = COALESCE($12, status_markers),\n            updated_at = now()\n        WHERE id = $1\n        RETURNING *",
+  "query": "UPDATE tokens SET\n            name = COALESCE($2, name),\n            asset_id = CASE WHEN $3 THEN $4 ELSE asset_id END,\n            owner_id = CASE WHEN $5 THEN $6 ELSE owner_id END,\n            x = COALESCE($7, x),\n            y = COALESCE($8, y),\n            size = COALESCE($9, size),\n            rotation = COALESCE($10, rotation),\n            bars_json = COALESCE($11, bars_json),\n            status_markers = COALESCE($12, status_markers),\n            has_vision = COALESCE($13, has_vision),\n            vision_range = COALESCE($14, vision_range),\n            darkvision_range = COALESCE($15, darkvision_range),\n            light_bright = COALESCE($16, light_bright),\n            light_dim = COALESCE($17, light_dim),\n            updated_at = now()\n        WHERE id = $1\n        RETURNING *",
   "describe": {
     "columns": [
       {
@@ -72,6 +72,31 @@
         "ordinal": 13,
         "name": "character_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "has_vision",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "vision_range",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 16,
+        "name": "darkvision_range",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 17,
+        "name": "light_bright",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 18,
+        "name": "light_dim",
+        "type_info": "Float4"
       }
     ],
     "parameters": {
@@ -87,7 +112,12 @@
         "Int4",
         "Float4",
         "Jsonb",
-        "TextArray"
+        "TextArray",
+        "Bool",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4"
       ]
     },
     "nullable": [
@@ -104,8 +134,13 @@
       false,
       false,
       false,
-      true
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
     ]
   },
-  "hash": "8b3bcb24a8bd2c933dc492a20e0aee3363316bc2898776a736646b35783ffb27"
+  "hash": "69898daea6513667dd2a8c2dd9e0e60d1e4edc76d331811aed6131b1c14cb4bc"
 }

@@ -20,6 +20,7 @@ pub struct Map {
     pub diagonal_mode: DiagonalMode,
     pub width_squares: i32,
     pub height_squares: i32,
+    pub player_door_control: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

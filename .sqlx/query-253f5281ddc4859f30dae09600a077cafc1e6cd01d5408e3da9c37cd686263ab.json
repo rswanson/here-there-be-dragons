@@ -82,6 +82,11 @@
         "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "player_door_control",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -102,6 +107,7 @@
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,

@@ -72,6 +72,31 @@
         "ordinal": 13,
         "name": "character_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "has_vision",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "vision_range",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 16,
+        "name": "darkvision_range",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 17,
+        "name": "light_bright",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 18,
+        "name": "light_dim",
+        "type_info": "Float4"
       }
     ],
     "parameters": {
@@ -93,7 +118,12 @@
       false,
       false,
       false,
-      true
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
     ]
   },
   "hash": "e65f751d20ea6ecd7d7d02f11e1898a11330876965ebac2ead334ab9e83c870b"

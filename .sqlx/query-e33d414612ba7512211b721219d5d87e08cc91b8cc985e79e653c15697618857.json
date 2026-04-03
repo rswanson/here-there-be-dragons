@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM walls WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "map_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "x1",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 3,
+        "name": "y1",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 4,
+        "name": "x2",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 5,
+        "name": "y2",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "wall_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "door_state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e33d414612ba7512211b721219d5d87e08cc91b8cc985e79e653c15697618857"
+}
