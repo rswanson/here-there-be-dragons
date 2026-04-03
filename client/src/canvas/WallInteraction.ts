@@ -6,6 +6,7 @@ import { useWallStore } from '../state/walls'
 import { useMapStore } from '../state/map'
 import { useFogStore } from '../state/fog'
 import { useVisionStore } from '../state/vision'
+import { usePresenceStore } from '../state/presence'
 import { wsClient } from '../api/ws'
 import type { Viewport } from './Viewport'
 import { getCellSize } from './utils'
@@ -245,6 +246,30 @@ export class WallInteraction {
         wsClient.send({ type: 'DeleteWalls', payload: { wall_ids: selectedIds } })
         useWallStore.getState().deselectAll()
         useVisionStore.getState().setDirty()
+      }
+    }
+
+    // Cycle vision mode: dm → player1 → player2 → ... → dm
+    if (e.key === 'v' || e.key === 'V') {
+      const { visionMode, previewPlayerId } = useFogStore.getState()
+      const { connectedUsers } = usePresenceStore.getState()
+      const players = connectedUsers.filter((u) => u.role !== 'dm')
+
+      if (visionMode === 'dm') {
+        // Switch to first player if any, otherwise stay dm
+        if (players.length > 0) {
+          useFogStore.getState().setVisionMode('player', players[0].user_id)
+        }
+      } else {
+        // Find the index of the current preview player and advance
+        const currentIndex = players.findIndex((u) => u.user_id === previewPlayerId)
+        const nextIndex = currentIndex + 1
+        if (nextIndex < players.length) {
+          useFogStore.getState().setVisionMode('player', players[nextIndex].user_id)
+        } else {
+          // Wrapped past all players — return to dm mode
+          useFogStore.getState().setVisionMode('dm')
+        }
       }
     }
   }
