@@ -25,6 +25,15 @@ needing to check out the branch.
 - The user asks to "document", "screenshot", or "prepare" a PR
 - Any branch with user-facing changes (UI, behavior, new features)
 
+<HARD-GATE>
+Do NOT write the PR body or call `gh pr create` / `gh pr edit` until you have
+captured and committed a screenshot for every user-facing feature identified in
+Phase 1. A PR without screenshots of its UI changes is incomplete — the whole
+point of this skill is visual documentation. If you cannot start the dev stack
+or capture screenshots, tell the user what's blocking you and ask for help.
+Do not silently skip screenshots and proceed to writing the PR description.
+</HARD-GATE>
+
 ## The PR Documentation Process
 
 ### Phase 1: Understand the changes
@@ -48,10 +57,39 @@ Before writing anything, build a complete picture of what changed.
    - **Test coverage** (what testing was added)
    - **Code quality improvements** (refactors, perf, cleanup)
 
+4. **Build the screenshot checklist** — list every user-facing feature that needs
+   a screenshot. This checklist gates Phase 2 completion. Format it like:
+   ```
+   Screenshots needed:
+   - [ ] Feature A — description of what to capture
+   - [ ] Feature B — description of what to capture
+   - [ ] Feature C — description of what to capture
+   ```
+
 ### Phase 2: Capture screenshots
 
-Every user-facing feature needs a screenshot. Screenshots are the most impactful
-part of the PR — they let reviewers immediately see what was built.
+Screenshots are the most impactful part of the PR. A PR with user-facing changes
+but no screenshots is like a book review with no quotes — it asks the reader to
+take your word for it. Capture screenshots for every item on the checklist from
+Phase 1 before proceeding.
+
+#### Start the dev environment
+
+This is required, not optional. Before capturing screenshots:
+
+1. **Check if services are already running** on expected ports (e.g., 3000, 5173)
+2. **If not running, start them:**
+   ```bash
+   # Database
+   docker compose -f docker/docker-compose.dev.yml up db -d
+   # Backend server
+   cargo run -p server &
+   # Frontend dev server
+   cd client && npm run dev &
+   ```
+3. **Wait for all services** to be healthy before proceeding
+4. **If the dev stack cannot start** (missing env vars, DB issues, build failures),
+   stop and tell the user. Do not skip screenshots.
 
 #### Screenshot strategy
 
@@ -64,36 +102,44 @@ most compelling to a reviewer:
 
 #### Screenshot capture approach
 
-1. **Check for existing screenshots** — E2E visual regression snapshots, test
-   artifacts, or manually captured images may already exist in the repo.
+Write a temporary Playwright spec that exercises the features:
+- Set up test data (register user, create campaign, create map, place tokens, etc.)
+- Navigate to the relevant UI state
+- Capture screenshots with `page.screenshot({ path: '...' })`
 
-2. **Capture new screenshots via Playwright** when existing ones are insufficient:
-   - Write a temporary Playwright spec that exercises the features
-   - Start the full dev stack (database, backend, frontend)
-   - Run the spec to capture screenshots
-   - Review the screenshots visually before including them
+Existing E2E visual regression snapshots or test artifacts can supplement your
+screenshots, but they rarely show features the way a reviewer wants to see them
+(they're often empty states or minimal setups). Always capture purpose-built
+screenshots that showcase the feature at its best.
 
-3. **Screenshot quality checklist:**
-   - Shows the feature clearly (not just empty canvas or loading states)
-   - Includes relevant UI context (toolbars, panels, etc.)
-   - Has actual data/content visible (tokens placed, drawings drawn, etc.)
-   - Resolution is readable when embedded in the PR
+**Screenshot quality checklist:**
+- Shows the feature clearly (not just empty canvas or loading states)
+- Includes relevant UI context (toolbars, panels, etc.)
+- Has actual data/content visible (tokens placed, drawings drawn, etc.)
+- Resolution is readable when embedded in the PR
 
-4. **For features requiring data setup** (like tokens with images, populated lists):
-   - Use the REST API via `page.evaluate()` to create test data
-   - Upload assets through the UI's file input or API
-   - If the frontend doesn't auto-load data, inject it into state stores
-     via dynamic import in `page.evaluate()`
+**For features requiring data setup** (like tokens with images, populated lists):
+- Use the REST API via `page.evaluate()` to create test data
+- Upload assets through the UI's file input or API
+- If the frontend doesn't auto-load data, inject it into state stores
+  via dynamic import in `page.evaluate()`
 
 #### Screenshot management
 
 - Save screenshots to `docs/screenshots/` in the repo (committed to the branch)
-- Use descriptive numbered names: `01-feature-name.png`, `02-other-feature.png`
+- Use descriptive numbered names matching the PR feature:
+  `sp5-01-wall-toolbar.png`, `sp5-02-fog-of-war.png`
 - Reference them in the PR body via raw GitHub URLs:
   ```
   ![Description](https://raw.githubusercontent.com/<owner>/<repo>/<branch>/docs/screenshots/<name>.png)
   ```
-- Clean up temporary Playwright specs and working files after capture
+- Clean up temporary Playwright specs after capture
+
+#### Verify checklist completion
+
+Before proceeding to Phase 3, verify every item on the screenshot checklist is
+checked off. If any are missing, go back and capture them. This is the gate —
+do not proceed with unchecked items.
 
 ### Phase 3: Write the PR body
 
@@ -165,13 +211,11 @@ the key outcome.
 
 1. **Run all pre-push checks** before pushing screenshots or code changes
 2. **Push the branch** with new commits (screenshots, any code changes)
-3. **Update the PR body** via `gh pr edit`
+3. **Create or update the PR** via `gh pr create` or `gh pr edit`
 4. **Verify images render** — raw GitHub URLs may take a moment to propagate
 
 ## Tips
 
-- If the dev environment isn't running, start it before capturing screenshots.
-  Check for running processes on expected ports first.
 - Resize large images before committing (256px is fine for tokens, maps can
   be larger). Use `sips` on macOS or ImageMagick.
 - When uploading assets through Playwright, use `setInputFiles()` on the file

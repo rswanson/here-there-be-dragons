@@ -103,10 +103,20 @@ db-prepare:
 docker:
     docker compose -f docker/docker-compose.yml up --build
 
+# Stop full stack docker compose
+[group("docker")]
+docker-stop:
+    docker compose -f docker/docker-compose.yml down
+
 # Start dev dependencies (DB) via docker compose
 [group("docker")]
 docker-dev:
     docker compose -f docker/docker-compose.dev.yml up
+
+# Stop dev dependencies
+[group("docker")]
+docker-dev-stop:
+    docker compose -f docker/docker-compose.dev.yml down
 
 # Remove stale worktree metadata (directory already deleted)
 [group("worktree")]
