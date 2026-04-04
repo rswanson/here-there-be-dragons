@@ -72,12 +72,17 @@ export class TextureManager {
 
   private async loadTexture(url: string): Promise<Texture> {
     const { Texture } = await import('pixi.js')
+    // Use fetch with credentials to handle authenticated asset endpoints,
+    // then create a blob URL for the Image element
+    const res = await fetch(url, { credentials: 'include' })
+    if (!res.ok) throw new Error(`Failed to load: ${url} (${res.status})`)
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
     const img = new window.Image()
-    img.crossOrigin = 'anonymous'
-    img.src = url
+    img.src = blobUrl
     await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve()
-      img.onerror = () => reject(new Error(`Failed to load: ${url}`))
+      img.onload = () => { URL.revokeObjectURL(blobUrl); resolve() }
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error(`Failed to decode: ${url}`)) }
     })
     return Texture.from(img)
   }

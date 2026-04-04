@@ -54,7 +54,7 @@ export class MapImageRenderer {
         // Release texture reference
         const img = this.prevImages.find((i) => i.id === id)
         if (img && this.textureManager) {
-          this.textureManager.release(`/api/assets/${img.asset_id}/download`)
+          this.textureManager.release(`/api/assets/${img.asset_id}`)
         }
         this.imageTextures.delete(id)
       }
@@ -67,7 +67,7 @@ export class MapImageRenderer {
       const pixelW = image.width * gridSize
       const pixelH = image.height * gridSize
 
-      const assetUrl = `/api/assets/${image.asset_id}/download`
+      const assetUrl = `/api/assets/${image.asset_id}`
 
       // Start async texture load if not already loading/loaded
       if (!this.imageTextures.has(image.id) && this.textureManager) {
@@ -118,7 +118,7 @@ export class MapImageRenderer {
       for (const [imageId] of this.imageTextures) {
         const img = this.prevImages.find((i) => i.id === imageId)
         if (img) {
-          this.textureManager.release(`/api/assets/${img.asset_id}/download`)
+          this.textureManager.release(`/api/assets/${img.asset_id}`)
         }
       }
     }
