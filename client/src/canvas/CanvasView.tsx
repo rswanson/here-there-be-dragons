@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Application, Sprite } from 'pixi.js'
-import { useUiStore } from '../state/ui'
+import type { Application } from 'pixi.js'
 import type { Viewport } from './Viewport'
 import type { GridRenderer } from './GridRenderer'
 import type { LayerManager } from './LayerManager'
@@ -28,7 +27,6 @@ export function CanvasView() {
   const [status, setStatus] = useState<CanvasStatus>('loading')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const appRef = useRef<PixiApp | null>(null)
-  const spriteRef = useRef<Sprite | null>(null)
   const pixiRef = useRef<typeof import('pixi.js') | null>(null)
   const viewportRef = useRef<Viewport | null>(null)
   const gridRef = useRef<GridRenderer | null>(null)
@@ -46,7 +44,6 @@ export function CanvasView() {
   const lightRendererRef = useRef<LightRenderer | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
   const accessibilityRef = useRef<AccessibilityDOM | null>(null)
-  const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -203,58 +200,12 @@ export function CanvasView() {
         app.destroy()
       }
       appRef.current = null
-      spriteRef.current = null
     }
   }, [])
 
-  useEffect(() => {
-    if (!mapAssetUrl || !appRef.current || status !== 'ready') return
-
-    const PIXI = pixiRef.current
-    if (!PIXI) return
-
-    let cancelled = false
-
-    const loadMap = async () => {
-      const app = appRef.current
-      const viewport = viewportRef.current
-      if (!app || !viewport || cancelled) return
-
-      if (spriteRef.current) {
-        viewport.container.removeChild(spriteRef.current)
-        spriteRef.current.destroy()
-        spriteRef.current = null
-      }
-
-      try {
-        // Load image via native Image element because the asset API URL
-        // has no file extension, and PIXI.Assets.load() relies on
-        // extensions to pick the right parser. The browser's Image
-        // element uses the Content-Type header from the server instead.
-        const img = new window.Image()
-        img.crossOrigin = 'anonymous'
-        img.src = mapAssetUrl
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve()
-          img.onerror = () => reject(new Error(`Failed to load image: ${mapAssetUrl}`))
-        })
-        if (cancelled || !appRef.current || !viewportRef.current) return
-        const texture = PIXI.Texture.from(img)
-        const sprite = new PIXI.Sprite(texture)
-        // Fit the map to the screen and use fitToRect for a proper viewport fit
-        viewportRef.current.fitToRect(sprite.width, sprite.height)
-        // Add map sprite at index 0 so it renders BEHIND grid, layers, walls, fog
-        viewportRef.current.container.addChildAt(sprite, 0)
-        spriteRef.current = sprite
-      } catch (err) {
-        console.error('Failed to load map asset:', err)
-      }
-    }
-
-    loadMap()
-
-    return () => { cancelled = true }
-  }, [mapAssetUrl, status])
+  // Map images are now rendered by MapImageRenderer via the layer system.
+  // No sprite fallback needed — images load from the mapImages store
+  // which is populated from the server on map selection.
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
@@ -290,7 +241,7 @@ export function CanvasView() {
         tabIndex={0}
         aria-live="polite"
       >
-        <p>{mapAssetUrl ? 'Map loaded on canvas.' : 'Empty canvas. Grid and tokens will appear here when a map is loaded.'}</p>
+        <p>Battle map canvas. Grid and tokens will appear here when a map is loaded.</p>
       </div>
     </div>
   )
