@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO fog_cells (map_id, x, y) VALUES ($1, $2, $3) ON CONFLICT (map_id, x, y) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cd83315205e36af34f3b34a52ab706e3fcf0418bcb193c683d891f7b2345740b"
+}

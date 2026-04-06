@@ -2,6 +2,7 @@ pub mod auth;
 pub mod character;
 pub mod chat;
 pub mod drawing;
+pub mod fog;
 pub mod game_system;
 pub mod handout;
 pub mod initiative;
@@ -9,6 +10,7 @@ pub mod map;
 pub mod messages;
 pub mod models;
 pub mod token;
+pub mod wall;
 
 // Re-export commonly used types
 pub use messages::*;
@@ -107,5 +109,16 @@ mod tests {
         initiative::Combatant::export_all(&cfg).unwrap();
         initiative::StartEncounterRequest::export_all(&cfg).unwrap();
         initiative::NewCombatant::export_all(&cfg).unwrap();
+
+        // Wall
+        wall::Wall::export_all(&cfg).unwrap();
+        wall::WallType::export_all(&cfg).unwrap();
+        wall::DoorState::export_all(&cfg).unwrap();
+        wall::CreateWallRequest::export_all(&cfg).unwrap();
+        wall::UpdateWallRequest::export_all(&cfg).unwrap();
+
+        // Fog
+        fog::FogCell::export_all(&cfg).unwrap();
+        fog::RevealFogRequest::export_all(&cfg).unwrap();
     }
 }

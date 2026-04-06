@@ -2,4 +2,4 @@
 import type { DiagonalMode } from "./DiagonalMode";
 import type { SnapMode } from "./SnapMode";
 
-export type Map = { id: string, campaign_id: string, name: string, grid_enabled: boolean, grid_size_px: number, grid_color: string, grid_opacity: number, grid_line_width: number, grid_scale: number, grid_scale_unit: string, snap_mode: SnapMode, diagonal_mode: DiagonalMode, width_squares: number, height_squares: number, created_at: string, updated_at: string, };
+export type Map = { id: string, campaign_id: string, name: string, grid_enabled: boolean, grid_size_px: number, grid_color: string, grid_opacity: number, grid_line_width: number, grid_scale: number, grid_scale_unit: string, snap_mode: SnapMode, diagonal_mode: DiagonalMode, width_squares: number, height_squares: number, player_door_control: boolean, created_at: string, updated_at: string, };

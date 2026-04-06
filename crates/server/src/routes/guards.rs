@@ -61,6 +61,15 @@ pub async fn require_character_owner_or_dm(
     Ok((campaign_id, role))
 }
 
+/// Resolve map_id → campaign_id.
+pub async fn get_campaign_id_for_map(
+    state: &AppState,
+    map_id: &Uuid,
+) -> Result<Option<Uuid>, AppError> {
+    let map_row = db::maps::find_by_id(&state.pool, map_id).await?;
+    Ok(map_row.map(|m| m.campaign_id))
+}
+
 /// Resolve layer_id → map_id → campaign_id and require DM role.
 pub async fn require_dm_for_layer(
     state: &AppState,

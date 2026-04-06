@@ -5,6 +5,7 @@ pub mod character_fields;
 pub mod characters;
 pub mod chat_messages;
 pub mod drawings;
+pub mod fog_cells;
 pub mod handouts;
 pub mod initiative;
 pub mod map_images;
@@ -13,6 +14,7 @@ pub mod maps;
 pub mod refresh_tokens;
 pub mod tokens;
 pub mod users;
+pub mod walls;
 
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;

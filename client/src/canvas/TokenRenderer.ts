@@ -1,12 +1,28 @@
 import { Container, Graphics, Sprite, Text, TextStyle, type Texture } from 'pixi.js'
 import { useTokenStore } from '../state/tokens'
 import { useMapStore } from '../state/map'
+import { useFogStore } from '../state/fog'
+import { useVisionStore } from '../state/vision'
 import { gridToPixel } from './math/grid'
 import type { LayerManager } from './LayerManager'
 import type { TextureManager } from './TextureManager'
 import type { Token } from '../types/Token'
+import type { Point } from './math/raycasting'
 import { getCellSize } from './utils'
 import type { TokenBar } from '../types/TokenBar'
+
+/** Point-in-polygon test using ray casting algorithm. */
+function isPointInPolygon(px: number, py: number, polygon: Point[]): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y
+    const xj = polygon[j].x, yj = polygon[j].y
+    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
+}
 
 // Deterministic colour from a string (used as placeholder circle colour).
 function tokenColour(id: string): number {
@@ -115,11 +131,15 @@ export class TokenRenderer {
   private tokenTextures = new Map<string, Texture | null>()
   private unsubTokens: (() => void) | null = null
   private unsubMap: (() => void) | null = null
+  private unsubVision: (() => void) | null = null
+  private unsubFog: (() => void) | null = null
 
   // Change detection: track previous state to skip redundant syncs
   private prevTokens: Token[] = []
   private prevSelectedIds: string[] = []
   private prevGridSize = 0
+  private prevPolygons: Record<string, Point[]> = {}
+  private prevVisionMode = ''
 
   constructor(layerManager: LayerManager, textureManager?: TextureManager) {
     this.layerManager = layerManager
@@ -139,6 +159,20 @@ export class TokenRenderer {
         this.sync()
       }
     })
+    this.unsubVision = useVisionStore.subscribe(() => {
+      const { polygons } = useVisionStore.getState()
+      if (polygons !== this.prevPolygons) {
+        this.prevPolygons = polygons
+        this.sync()
+      }
+    })
+    this.unsubFog = useFogStore.subscribe(() => {
+      const { visionMode } = useFogStore.getState()
+      if (visionMode !== this.prevVisionMode) {
+        this.prevVisionMode = visionMode
+        this.sync()
+      }
+    })
     this.sync()
   }
 
@@ -146,6 +180,9 @@ export class TokenRenderer {
     const tokens = useTokenStore.getState().tokens
     const selectedIds = useTokenStore.getState().selectedIds
     const gridSize = getCellSize()
+    const { visionMode } = useFogStore.getState()
+    const { polygons } = useVisionStore.getState()
+    const isFogActive = visionMode !== 'dm'
 
     // Remove containers for tokens that no longer exist
     const currentIds = new Set(tokens.map((t) => t.id))
@@ -159,11 +196,32 @@ export class TokenRenderer {
 
     // Create / update each token
     for (const token of tokens) {
+      // Fog-aware filtering: skip tokens not visible to any vision polygon
+      if (isFogActive) {
+        const tokenCenterX = token.x + token.size / 2
+        const tokenCenterY = token.y + token.size / 2
+        let visible = false
+        for (const polygon of Object.values(polygons)) {
+          if (polygon.length >= 3 && isPointInPolygon(tokenCenterX, tokenCenterY, polygon)) {
+            visible = true
+            break
+          }
+        }
+        if (!visible) {
+          // Hide existing container if it exists
+          const existing = this.tokenContainers.get(token.id)
+          if (existing) {
+            existing.visible = false
+          }
+          continue
+        }
+      }
       let container = this.tokenContainers.get(token.id)
       if (!container) {
         container = new Container()
         this.tokenContainers.set(token.id, container)
       }
+      container.visible = true
 
       // Position in world space
       const pixel = gridToPixel(token.x, token.y, gridSize)
@@ -201,6 +259,8 @@ export class TokenRenderer {
   destroy(): void {
     this.unsubTokens?.()
     this.unsubMap?.()
+    this.unsubVision?.()
+    this.unsubFog?.()
     for (const [, container] of this.tokenContainers) {
       container.parent?.removeChild(container)
       container.destroy({ children: true })

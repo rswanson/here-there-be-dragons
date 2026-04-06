@@ -20,6 +20,7 @@ pub struct Map {
     pub diagonal_mode: DiagonalMode,
     pub width_squares: i32,
     pub height_squares: i32,
+    pub player_door_control: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -88,6 +89,8 @@ pub struct MapFullState {
     pub layers: Vec<MapLayer>,
     pub tokens: Vec<crate::token::Token>,
     pub drawings: Vec<crate::drawing::Drawing>,
+    pub walls: Vec<crate::wall::Wall>,
+    pub fog_cells: Vec<crate::fog::FogCell>,
 }
 
 /// Request type for creating a new map

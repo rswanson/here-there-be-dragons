@@ -53,6 +53,11 @@ async fn create_token(
         req.rotation,
         &bars_json,
         &req.status_markers,
+        req.has_vision,
+        req.vision_range,
+        req.darkvision_range,
+        req.light_bright,
+        req.light_dim,
     )
     .await?;
 
@@ -111,6 +116,11 @@ async fn update_token(
         req.rotation,
         bars_json.as_ref(),
         req.status_markers.as_deref(),
+        req.has_vision,
+        req.vision_range,
+        req.darkvision_range,
+        req.light_bright,
+        req.light_dim,
     )
     .await?
     .ok_or(AppError::NotFound)?;

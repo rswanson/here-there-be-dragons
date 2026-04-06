@@ -17,6 +17,7 @@ pub struct MapRow {
     pub diagonal_mode: String,
     pub width_squares: i32,
     pub height_squares: i32,
+    pub player_door_control: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -40,6 +41,7 @@ impl From<MapRow> for htbd_core::map::Map {
                 .unwrap_or(htbd_core::map::DiagonalMode::DndStandard),
             width_squares: row.width_squares,
             height_squares: row.height_squares,
+            player_door_control: row.player_door_control,
             created_at: row.created_at,
             updated_at: row.updated_at,
         }

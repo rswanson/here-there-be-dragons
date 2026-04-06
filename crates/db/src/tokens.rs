@@ -17,6 +17,11 @@ pub struct TokenRow {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub character_id: Option<Uuid>,
+    pub has_vision: bool,
+    pub vision_range: f32,
+    pub darkvision_range: f32,
+    pub light_bright: f32,
+    pub light_dim: f32,
 }
 
 impl From<TokenRow> for htbd_core::token::Token {
@@ -35,6 +40,11 @@ impl From<TokenRow> for htbd_core::token::Token {
             rotation: row.rotation,
             bars,
             status_markers: row.status_markers,
+            has_vision: row.has_vision,
+            vision_range: row.vision_range,
+            darkvision_range: row.darkvision_range,
+            light_bright: row.light_bright,
+            light_dim: row.light_dim,
             created_at: row.created_at,
             updated_at: row.updated_at,
         }
@@ -54,11 +64,16 @@ pub async fn create_token(
     rotation: f32,
     bars_json: &serde_json::Value,
     status_markers: &[String],
+    has_vision: bool,
+    vision_range: f32,
+    darkvision_range: f32,
+    light_bright: f32,
+    light_dim: f32,
 ) -> Result<TokenRow, sqlx::Error> {
     sqlx::query_as!(
         TokenRow,
-        r#"INSERT INTO tokens (layer_id, name, asset_id, owner_id, x, y, size, rotation, bars_json, status_markers)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        r#"INSERT INTO tokens (layer_id, name, asset_id, owner_id, x, y, size, rotation, bars_json, status_markers, has_vision, vision_range, darkvision_range, light_bright, light_dim)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
            RETURNING *"#,
         layer_id,
         name,
@@ -69,7 +84,12 @@ pub async fn create_token(
         size,
         rotation,
         bars_json,
-        status_markers
+        status_markers,
+        has_vision,
+        vision_range,
+        darkvision_range,
+        light_bright,
+        light_dim
     )
     .fetch_one(pool)
     .await
@@ -96,7 +116,8 @@ pub async fn list_for_map(pool: &PgPool, map_id: &Uuid) -> Result<Vec<TokenRow>,
         TokenRow,
         r#"SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,
                   t.x, t.y, t.size, t.rotation, t.bars_json,
-                  t.status_markers, t.character_id, t.created_at, t.updated_at
+                  t.status_markers, t.character_id, t.created_at, t.updated_at,
+                  t.has_vision, t.vision_range, t.darkvision_range, t.light_bright, t.light_dim
            FROM tokens t
            JOIN map_layers l ON t.layer_id = l.id
            WHERE l.map_id = $1
@@ -115,7 +136,8 @@ pub async fn list_for_map_player(
         TokenRow,
         r#"SELECT t.id, t.layer_id, t.name, t.asset_id, t.owner_id,
                   t.x, t.y, t.size, t.rotation, t.bars_json,
-                  t.status_markers, t.character_id, t.created_at, t.updated_at
+                  t.status_markers, t.character_id, t.created_at, t.updated_at,
+                  t.has_vision, t.vision_range, t.darkvision_range, t.light_bright, t.light_dim
            FROM tokens t
            JOIN map_layers l ON t.layer_id = l.id
            WHERE l.map_id = $1 AND l.dm_only = false
@@ -157,6 +179,11 @@ pub async fn update_token(
     rotation: Option<f32>,
     bars_json: Option<&serde_json::Value>,
     status_markers: Option<&[String]>,
+    has_vision: Option<bool>,
+    vision_range: Option<f32>,
+    darkvision_range: Option<f32>,
+    light_bright: Option<f32>,
+    light_dim: Option<f32>,
 ) -> Result<Option<TokenRow>, sqlx::Error> {
     sqlx::query_as!(
         TokenRow,
@@ -170,6 +197,11 @@ pub async fn update_token(
             rotation = COALESCE($10, rotation),
             bars_json = COALESCE($11, bars_json),
             status_markers = COALESCE($12, status_markers),
+            has_vision = COALESCE($13, has_vision),
+            vision_range = COALESCE($14, vision_range),
+            darkvision_range = COALESCE($15, darkvision_range),
+            light_bright = COALESCE($16, light_bright),
+            light_dim = COALESCE($17, light_dim),
             updated_at = now()
         WHERE id = $1
         RETURNING *"#,
@@ -184,7 +216,12 @@ pub async fn update_token(
         size,
         rotation,
         bars_json,
-        status_markers
+        status_markers,
+        has_vision,
+        vision_range,
+        darkvision_range,
+        light_bright,
+        light_dim
     )
     .fetch_optional(pool)
     .await
@@ -248,6 +285,11 @@ mod tests {
             0.0,
             &bars,
             &["stunned".to_string()],
+            false,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         .await
         .unwrap();
@@ -274,6 +316,11 @@ mod tests {
             0.0,
             &serde_json::json!([]),
             &[],
+            false,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         .await
         .unwrap();
@@ -301,6 +348,11 @@ mod tests {
             0.0,
             &serde_json::json!([]),
             &[],
+            false,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         .await
         .unwrap();

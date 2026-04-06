@@ -4,4 +4,4 @@ import type { TokenBar } from "./TokenBar";
 /**
  * Request type for creating a token
  */
-export type CreateTokenRequest = { name: string, asset_id: string | null, owner_id: string | null, x: number, y: number, size: number, rotation: number, bars: Array<TokenBar>, status_markers: Array<string>, };
+export type CreateTokenRequest = { name: string, asset_id: string | null, owner_id: string | null, x: number, y: number, size: number, rotation: number, bars: Array<TokenBar>, status_markers: Array<string>, has_vision: boolean, vision_range: number, darkvision_range: number, light_bright: number, light_dim: number, };

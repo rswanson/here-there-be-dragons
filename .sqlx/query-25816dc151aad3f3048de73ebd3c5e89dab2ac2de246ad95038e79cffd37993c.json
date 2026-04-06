@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT x, y FROM fog_cells WHERE map_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "x",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "y",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "25816dc151aad3f3048de73ebd3c5e89dab2ac2de246ad95038e79cffd37993c"
+}

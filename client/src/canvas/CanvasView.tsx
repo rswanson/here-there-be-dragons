@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Application, Sprite } from 'pixi.js'
-import { useUiStore } from '../state/ui'
+import type { Application } from 'pixi.js'
 import type { Viewport } from './Viewport'
 import type { GridRenderer } from './GridRenderer'
 import type { LayerManager } from './LayerManager'
@@ -10,7 +9,12 @@ import type { DrawingRenderer } from './DrawingRenderer'
 import type { DrawingTools } from './DrawingTools'
 import type { AoeTemplates } from './AoeTemplates'
 import type { MeasurementOverlay } from './MeasurementOverlay'
+import type { WallRenderer } from './WallRenderer'
+import type { WallInteraction } from './WallInteraction'
+import type { FogRenderer } from './FogRenderer'
+import type { LightRenderer } from './LightRenderer'
 import type { TextureManager } from './TextureManager'
+import type { MapImageRenderer } from './MapImageRenderer'
 import type { AccessibilityDOM } from './AccessibilityDOM'
 
 type CanvasStatus = 'loading' | 'ready' | 'error'
@@ -23,20 +27,23 @@ export function CanvasView() {
   const [status, setStatus] = useState<CanvasStatus>('loading')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const appRef = useRef<PixiApp | null>(null)
-  const spriteRef = useRef<Sprite | null>(null)
   const pixiRef = useRef<typeof import('pixi.js') | null>(null)
   const viewportRef = useRef<Viewport | null>(null)
   const gridRef = useRef<GridRenderer | null>(null)
   const layerManagerRef = useRef<LayerManager | null>(null)
+  const mapImageRendererRef = useRef<MapImageRenderer | null>(null)
   const tokenRendererRef = useRef<TokenRenderer | null>(null)
   const tokenInteractionRef = useRef<TokenInteraction | null>(null)
   const drawingRendererRef = useRef<DrawingRenderer | null>(null)
   const drawingToolsRef = useRef<DrawingTools | null>(null)
   const aoeTemplatesRef = useRef<AoeTemplates | null>(null)
   const measurementRef = useRef<MeasurementOverlay | null>(null)
+  const wallRendererRef = useRef<WallRenderer | null>(null)
+  const wallInteractionRef = useRef<WallInteraction | null>(null)
+  const fogRendererRef = useRef<FogRenderer | null>(null)
+  const lightRendererRef = useRef<LightRenderer | null>(null)
   const textureManagerRef = useRef<TextureManager | null>(null)
   const accessibilityRef = useRef<AccessibilityDOM | null>(null)
-  const mapAssetUrl = useUiStore((s) => s.mapAssetUrl)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -98,6 +105,11 @@ export function CanvasView() {
         layerManagerRef.current = new LayerManager(viewportRef.current)
         subsystems.push({ destroy: () => { layerManagerRef.current?.destroy(); layerManagerRef.current = null } })
 
+        const { MapImageRenderer } = await import('./MapImageRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        mapImageRendererRef.current = new MapImageRenderer(layerManagerRef.current, textureManagerRef.current!)
+        subsystems.push({ destroy: () => { mapImageRendererRef.current?.destroy(); mapImageRendererRef.current = null } })
+
         const { TokenRenderer } = await import('./TokenRenderer')
         if (!mounted) { destroySubsystems(app); return }
         tokenRendererRef.current = new TokenRenderer(layerManagerRef.current, textureManagerRef.current!)
@@ -127,6 +139,26 @@ export function CanvasView() {
         if (!mounted) { destroySubsystems(app); return }
         measurementRef.current = new MeasurementOverlay(app, viewportRef.current)
         subsystems.push({ destroy: () => { measurementRef.current?.destroy(); measurementRef.current = null } })
+
+        const { WallRenderer } = await import('./WallRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        wallRendererRef.current = new WallRenderer(viewportRef.current)
+        subsystems.push({ destroy: () => { wallRendererRef.current?.destroy(); wallRendererRef.current = null } })
+
+        const { WallInteraction } = await import('./WallInteraction')
+        if (!mounted) { destroySubsystems(app); return }
+        wallInteractionRef.current = new WallInteraction(app, viewportRef.current)
+        subsystems.push({ destroy: () => { wallInteractionRef.current?.destroy(); wallInteractionRef.current = null } })
+
+        const { FogRenderer } = await import('./FogRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        fogRendererRef.current = new FogRenderer(viewportRef.current)
+        subsystems.push({ destroy: () => { fogRendererRef.current?.destroy(); fogRendererRef.current = null } })
+
+        const { LightRenderer } = await import('./LightRenderer')
+        if (!mounted) { destroySubsystems(app); return }
+        lightRendererRef.current = new LightRenderer(viewportRef.current)
+        subsystems.push({ destroy: () => { lightRendererRef.current?.destroy(); lightRendererRef.current = null } })
 
         const { AccessibilityDOM } = await import('./AccessibilityDOM')
         if (!mounted) { destroySubsystems(app); return }
@@ -168,57 +200,12 @@ export function CanvasView() {
         app.destroy()
       }
       appRef.current = null
-      spriteRef.current = null
     }
   }, [])
 
-  useEffect(() => {
-    if (!mapAssetUrl || !appRef.current || status !== 'ready') return
-
-    const PIXI = pixiRef.current
-    if (!PIXI) return
-
-    let cancelled = false
-
-    const loadMap = async () => {
-      const app = appRef.current
-      const viewport = viewportRef.current
-      if (!app || !viewport || cancelled) return
-
-      if (spriteRef.current) {
-        viewport.container.removeChild(spriteRef.current)
-        spriteRef.current.destroy()
-        spriteRef.current = null
-      }
-
-      try {
-        // Load image via native Image element because the asset API URL
-        // has no file extension, and PIXI.Assets.load() relies on
-        // extensions to pick the right parser. The browser's Image
-        // element uses the Content-Type header from the server instead.
-        const img = new window.Image()
-        img.crossOrigin = 'anonymous'
-        img.src = mapAssetUrl
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve()
-          img.onerror = () => reject(new Error(`Failed to load image: ${mapAssetUrl}`))
-        })
-        if (cancelled || !appRef.current || !viewportRef.current) return
-        const texture = PIXI.Texture.from(img)
-        const sprite = new PIXI.Sprite(texture)
-        // Fit the map to the screen and use fitToRect for a proper viewport fit
-        viewportRef.current.fitToRect(sprite.width, sprite.height)
-        viewportRef.current.container.addChild(sprite)
-        spriteRef.current = sprite
-      } catch (err) {
-        console.error('Failed to load map asset:', err)
-      }
-    }
-
-    loadMap()
-
-    return () => { cancelled = true }
-  }, [mapAssetUrl, status])
+  // Map images are now rendered by MapImageRenderer via the layer system.
+  // No sprite fallback needed — images load from the mapImages store
+  // which is populated from the server on map selection.
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
@@ -254,7 +241,7 @@ export function CanvasView() {
         tabIndex={0}
         aria-live="polite"
       >
-        <p>{mapAssetUrl ? 'Map loaded on canvas.' : 'Empty canvas. Grid and tokens will appear here when a map is loaded.'}</p>
+        <p>Battle map canvas. Grid and tokens will appear here when a map is loaded.</p>
       </div>
     </div>
   )

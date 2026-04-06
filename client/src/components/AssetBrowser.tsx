@@ -3,6 +3,8 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { useUiStore } from '../state/ui'
+import { useMapStore } from '../state/map'
+import { mapsApi } from '../api/maps'
 import type { Asset } from '../types/Asset'
 
 export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: string; open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -156,7 +158,28 @@ export function AssetBrowser({ campaignId, open, onOpenChange }: { campaignId: s
                 <div style={{ display: 'flex', gap: 'var(--space-xs)', justifyContent: 'center', marginTop: 'var(--space-xs)' }}>
                   {asset.content_type.startsWith('image/') && (
                     <button
-                      onClick={() => { setMapAssetUrl(api.assets.url(asset.id)); onOpenChange(false) }}
+                      onClick={async () => {
+                        const { currentMap, layers } = useMapStore.getState()
+                        const bgLayer = layers.find(l => l.layer_type === 'map_image')
+                        if (currentMap && bgLayer) {
+                          try {
+                            await mapsApi.placeImage(bgLayer.id, {
+                              asset_id: asset.id,
+                              x: 0,
+                              y: 0,
+                              width: currentMap.width_squares,
+                              height: currentMap.height_squares,
+                              rotation: 0,
+                              opacity: 1,
+                            })
+                          } catch (e) {
+                            console.error('Failed to place map image:', e)
+                          }
+                        }
+                        // Also set local URL for the CanvasView sprite fallback
+                        setMapAssetUrl(api.assets.url(asset.id))
+                        onOpenChange(false)
+                      }}
                       style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-interactive)', background: 'none', border: 'none' }}
                       aria-label={`Set ${asset.filename} as map`}
                     >

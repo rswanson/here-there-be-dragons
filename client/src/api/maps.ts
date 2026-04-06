@@ -57,6 +57,9 @@ export const mapsApi = {
       body: JSON.stringify(layerIds),
     }),
 
+  listImages: (layerId: string) =>
+    request<MapImage[]>(`/layers/${layerId}/images`),
+
   placeImage: (layerId: string, data: PlaceMapImageRequest) =>
     request<MapImage>(`/layers/${layerId}/images`, {
       method: 'POST',

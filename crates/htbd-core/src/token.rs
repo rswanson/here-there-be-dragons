@@ -17,6 +17,11 @@ pub struct Token {
     pub rotation: f32,
     pub bars: Vec<TokenBar>,
     pub status_markers: Vec<String>,
+    pub has_vision: bool,
+    pub vision_range: f32,
+    pub darkvision_range: f32,
+    pub light_bright: f32,
+    pub light_dim: f32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -83,6 +88,16 @@ pub struct CreateTokenRequest {
     pub bars: Vec<TokenBar>,
     #[serde(default)]
     pub status_markers: Vec<String>,
+    #[serde(default)]
+    pub has_vision: bool,
+    #[serde(default)]
+    pub vision_range: f32,
+    #[serde(default)]
+    pub darkvision_range: f32,
+    #[serde(default)]
+    pub light_bright: f32,
+    #[serde(default)]
+    pub light_dim: f32,
 }
 
 fn default_size() -> i32 {
@@ -102,4 +117,9 @@ pub struct UpdateTokenRequest {
     pub rotation: Option<f32>,
     pub bars: Option<Vec<TokenBar>>,
     pub status_markers: Option<Vec<String>>,
+    pub has_vision: Option<bool>,
+    pub vision_range: Option<f32>,
+    pub darkvision_range: Option<f32>,
+    pub light_bright: Option<f32>,
+    pub light_dim: Option<f32>,
 }

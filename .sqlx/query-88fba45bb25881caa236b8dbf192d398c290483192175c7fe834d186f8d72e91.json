@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE walls SET\n            x1 = COALESCE($2, x1),\n            y1 = COALESCE($3, y1),\n            x2 = COALESCE($4, x2),\n            y2 = COALESCE($5, y2),\n            wall_type = COALESCE($6, wall_type),\n            door_state = COALESCE($7, door_state)\n        WHERE id = $1\n        RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "map_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "x1",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 3,
+        "name": "y1",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 4,
+        "name": "x2",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 5,
+        "name": "y2",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "wall_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "door_state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "88fba45bb25881caa236b8dbf192d398c290483192175c7fe834d186f8d72e91"
+}

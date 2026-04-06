@@ -1,14 +1,20 @@
 import { useTokenStore } from '../state/tokens'
 import { useToolStore } from '../state/tools'
+import { useWallStore } from '../state/walls'
+import { wsClient } from '../api/ws'
+import { useVisionStore } from '../state/vision'
+import type { Wall } from '../types/Wall'
 
 export class AccessibilityDOM {
   private container: HTMLDivElement
   private liveRegion: HTMLDivElement
   private tokenList: HTMLUListElement
+  private wallList: HTMLUListElement
   private unsubTokens: (() => void) | null = null
   private unsubTools: (() => void) | null = null
+  private unsubWalls: (() => void) | null = null
 
-  // Change detection: track previous tokens array reference
+  // Change detection: track previous arrays by reference
   private prevTokens: unknown[] = []
 
   constructor(parent: HTMLElement) {
@@ -25,6 +31,10 @@ export class AccessibilityDOM {
     this.tokenList.setAttribute('aria-label', 'Tokens on map')
     this.container.appendChild(this.tokenList)
 
+    this.wallList = document.createElement('ul')
+    this.wallList.setAttribute('aria-label', 'Walls and doors on map')
+    this.container.appendChild(this.wallList)
+
     parent.appendChild(this.container)
 
     this.unsubTokens = useTokenStore.subscribe(() => {
@@ -39,8 +49,14 @@ export class AccessibilityDOM {
         this.announce(`Tool: ${state.activeTool} selected`)
       }
     })
+    this.unsubWalls = useWallStore.subscribe((state, prev) => {
+      if (state.walls !== prev.walls) {
+        this.syncWalls(state.walls)
+      }
+    })
 
     this.syncTokens()
+    this.syncWalls(useWallStore.getState().walls)
   }
 
   private syncTokens(): void {
@@ -62,6 +78,30 @@ export class AccessibilityDOM {
     }
   }
 
+  private syncWalls(walls: Wall[]): void {
+    this.wallList.innerHTML = ''
+    for (const wall of walls) {
+      const li = document.createElement('li')
+
+      if (wall.wall_type === 'door') {
+        // Render doors as interactive buttons
+        const btn = document.createElement('button')
+        const stateLabel = wall.door_state ?? 'closed'
+        btn.textContent = `Door at (${wall.x1},${wall.y1}) to (${wall.x2},${wall.y2}) — ${stateLabel}`
+        btn.setAttribute('aria-label', `Door at (${wall.x1},${wall.y1}) to (${wall.x2},${wall.y2}), currently ${stateLabel}. Press to toggle.`)
+        btn.addEventListener('click', () => {
+          wsClient.send({ type: 'ToggleDoor', payload: { wall_id: wall.id } })
+          useVisionStore.getState().setDirty()
+        })
+        li.appendChild(btn)
+      } else {
+        li.textContent = `Wall from (${wall.x1},${wall.y1}) to (${wall.x2},${wall.y2})`
+      }
+
+      this.wallList.appendChild(li)
+    }
+  }
+
   announce(message: string): void {
     this.liveRegion.textContent = ''
     // Force screen reader to re-read by clearing first, then setting after a tick
@@ -70,9 +110,21 @@ export class AccessibilityDOM {
     })
   }
 
+  /** Announce a door state change (called externally when door toggle is received from server) */
+  announceDoorChange(doorState: string): void {
+    if (doorState === 'open') {
+      this.announce('Door opened')
+    } else if (doorState === 'locked') {
+      this.announce('Door is locked')
+    } else {
+      this.announce('Door closed')
+    }
+  }
+
   destroy(): void {
     this.unsubTokens?.()
     this.unsubTools?.()
+    this.unsubWalls?.()
     this.container.remove()
   }
 }

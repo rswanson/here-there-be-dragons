@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO tokens (layer_id, name, asset_id, owner_id, x, y, size, rotation, bars_json, status_markers)\n           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n           RETURNING *",
+  "query": "INSERT INTO tokens (layer_id, name, asset_id, owner_id, x, y, size, rotation, bars_json, status_markers, has_vision, vision_range, darkvision_range, light_bright, light_dim)\n           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\n           RETURNING *",
   "describe": {
     "columns": [
       {
@@ -72,6 +72,31 @@
         "ordinal": 13,
         "name": "character_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "has_vision",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "vision_range",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 16,
+        "name": "darkvision_range",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 17,
+        "name": "light_bright",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 18,
+        "name": "light_dim",
+        "type_info": "Float4"
       }
     ],
     "parameters": {
@@ -85,7 +110,12 @@
         "Int4",
         "Float4",
         "Jsonb",
-        "TextArray"
+        "TextArray",
+        "Bool",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4"
       ]
     },
     "nullable": [
@@ -102,8 +132,13 @@
       false,
       false,
       false,
-      true
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
     ]
   },
-  "hash": "e8fe14c9f952b701468c07b73f47809bfee92836c382066b7b42a9ffd8563292"
+  "hash": "2b3b9ddd7164bbf63abb111a0d9ab86a4ad4c0f020d32e68875638b66484d2cf"
 }

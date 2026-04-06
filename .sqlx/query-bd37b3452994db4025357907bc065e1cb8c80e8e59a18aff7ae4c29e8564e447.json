@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM fog_cells WHERE map_id = $1 AND x = $2 AND y = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bd37b3452994db4025357907bc065e1cb8c80e8e59a18aff7ae4c29e8564e447"
+}

@@ -10,6 +10,10 @@ import { CanvasView } from '../canvas/CanvasView'
 import { Toolbar } from '../components/Toolbar'
 import { LayerPanel } from '../components/LayerPanel'
 import { TokenInspector } from '../components/TokenInspector'
+import { WallToolbar } from '../components/WallToolbar'
+import { TokenVisionEditor } from '../components/TokenVisionEditor'
+import { VisionPanel } from '../components/VisionPanel'
+import { FogTool } from '../components/FogTool'
 import { MapSettings } from '../components/MapSettings'
 import { TokenContextMenu } from '../components/TokenContextMenu'
 import { SidebarTabs } from '../components/SidebarTabs'
@@ -19,6 +23,7 @@ import { useMapStore } from '../state/map'
 import { useTokenStore } from '../state/tokens'
 import { useDrawingStore } from '../state/drawings'
 import { useCharacterStore } from '../state/characters'
+import { useMapImageStore } from '../state/mapImages'
 import { useInitiativeStore } from '../state/initiative'
 import { useSessionStore } from '../state/session'
 import { usePresenceStore } from '../state/presence'
@@ -111,10 +116,14 @@ export function Campaign() {
       // Reconnect handler: reload current map state
       const mapId = selectedMapIdRef.current
       if (mapId) {
-        mapsApi.getState(mapId).then((data) => {
+        mapsApi.getState(mapId).then(async (data) => {
           loadMap(data.map, data.layers)
           loadTokens(data.tokens)
           loadDrawings(data.drawings)
+          // Load map images for each map_image layer
+          const imageLayers = data.layers.filter(l => l.layer_type === 'map_image')
+          const allImages = await Promise.all(imageLayers.map(l => mapsApi.listImages(l.id)))
+          useMapImageStore.getState().loadImages(allImages.flat())
         })
       }
     })
@@ -129,11 +138,15 @@ export function Campaign() {
   useEffect(() => {
     if (!selectedMapId) return
     let cancelled = false
-    mapsApi.getState(selectedMapId).then((data) => {
+    mapsApi.getState(selectedMapId).then(async (data) => {
       if (cancelled) return
       loadMap(data.map, data.layers)
       loadTokens(data.tokens)
       loadDrawings(data.drawings)
+      // Load map images for each map_image layer
+      const imageLayers = data.layers.filter(l => l.layer_type === 'map_image')
+      const allImages = await Promise.all(imageLayers.map(l => mapsApi.listImages(l.id)))
+      if (!cancelled) useMapImageStore.getState().loadImages(allImages.flat())
     })
     return () => {
       cancelled = true
@@ -178,6 +191,18 @@ export function Campaign() {
         <Toolbar />
         <LayerPanel />
         <TokenInspector />
+        {isDm && <TokenVisionEditor />}
+        {isDm && <WallToolbar />}
+        {isDm && (
+          <div style={{
+            position: 'absolute', left: 8, bottom: 8,
+            background: 'var(--color-surface, #2a2a3e)', borderRadius: 8,
+            padding: 6, zIndex: 10,
+          }}>
+            <FogTool />
+          </div>
+        )}
+        {isDm && <VisionPanel />}
         <InitiativePanel />
         {activeCharacterId && <CharacterSheet />}
 
